@@ -2,6 +2,18 @@
 #include "io_png.h"
 #include <sstream>
 #include <fstream>
+#include <cstdlib>
+
+/// Put one pixel wide blank strips at border of image
+static void blank_border(float* data, size_t w, size_t h) {
+    for(int i=1; i<h; i++) // Vertical strips
+        data[i*w-1] = data[i*w] = 0;
+    for(int i=0; i<w; i++) // First line
+        data[i] = 0;
+    data += (h-1)*w;
+    for(int i=0; i<w; i++) // Last line
+        data[i] = 0;
+}
 
 int main(int argc, char** argv) {
     if(argc != 5) {
@@ -29,6 +41,7 @@ int main(int argc, char** argv) {
     }
 
     // Work
+    blank_border(data, w, h);
     std::list<LevelLine> ll;
     extract(data, w, h, offset, step, ll);
 
@@ -39,5 +52,7 @@ int main(int argc, char** argv) {
         file << *it << "e" <<std::endl; //as required by megwave2's flreadasc
     file << "q" <<std::endl; //as required by megwave2's flreadasc
 
+
+    free(data);
     return 0;
 }
