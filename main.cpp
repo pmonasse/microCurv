@@ -5,7 +5,7 @@
 #include <cstdlib>
 
 /// Put one pixel wide blank strips at border of image
-static void blank_border(float* data, size_t w, size_t h) {
+static void blank_border(unsigned char* data, size_t w, size_t h) {
     for(int i=1; i<h; i++) // Vertical strips
         data[i*w-1] = data[i*w] = 0;
     for(int i=0; i<w; i++) // First line
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 
     // Input
     size_t w, h;
-    float* data = read_png_f32_gray(argv[1], &w, &h);
+    unsigned char* data = read_png_u8_gray(argv[1], &w, &h);
     if(! data) {
         std::cout << "Impossible to read PNG image " << argv[1] <<std::endl;
         return 1;
@@ -51,7 +51,6 @@ int main(int argc, char** argv) {
     for(it=ll.begin(); it!=ll.end(); ++it)
         file << *it << "e" <<std::endl; //as required by megwave2's flreadasc
     file << "q" <<std::endl; //as required by megwave2's flreadasc
-
 
     free(data);
     return 0;

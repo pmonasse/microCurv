@@ -32,15 +32,15 @@ std::ostream& operator<<(std::ostream& str, const LevelLine& l) {
 
 /// A dual pixel, square whose vertices are 4 data points
 struct DualPixel {
-    DualPixel(Point p, Dir d, const float* im, size_t w);
+    DualPixel(Point p, Dir d, const unsigned char* im, size_t w);
     float numSaddle() const; ///< Numerator of saddle value
     float denomSaddle() const; ///< Denominator of saddle value
-    float level[4];
+    unsigned char level[4];
     Point vertex[4];
 };
 
 /// Constructor
-DualPixel::DualPixel(Point p, Dir d, const float* im, size_t w) {
+DualPixel::DualPixel(Point p, Dir d, const unsigned char* im, size_t w) {
     switch(d) {
     case N:
         p.x = static_cast<float>((int)p.x+1);
@@ -65,12 +65,12 @@ DualPixel::DualPixel(Point p, Dir d, const float* im, size_t w) {
 
 /// The saddle value can be expressed as a fraction. This is its numerator.
 inline float DualPixel::numSaddle() const {
-    return (level[0]*level[2]-level[1]*level[3]);
+    return (level[0]*(float)level[2]-level[1]*(float)level[3]);
 }
 
 /// The saddle value can be expressed as a fraction. This is its denominator.
 inline float DualPixel::denomSaddle() const {
-    return (level[0]+level[2]-level[1]-level[3]);
+    return ((float)level[0]+level[2]-level[1]-level[3]);
 }
 
 /// Return x for y=v on line joining (0,v0) and (1,v1).
@@ -94,7 +94,7 @@ static bool mark_visit(const DualPixel& dual, std::vector<bool>& visit,size_t w,
 
 /// Find exit point of level line in dual pixel entering at \a p.
 /// Return false if it closes the level line.
-static bool follow(const float* data, size_t w, size_t h,
+static bool follow(const unsigned char* data, size_t w, size_t h,
                    std::vector<bool>& visit, float l,
                    Point& p, Dir& d) {
     DualPixel dual(p, d, data, w);
@@ -122,7 +122,7 @@ static bool follow(const float* data, size_t w, size_t h,
 }
 
 /// Extract line at level l
-static void extract(const float* data, size_t w, size_t h,
+static void extract(const unsigned char* data, size_t w, size_t h,
                     std::vector<bool>& visit, float l,
                     Point p, std::vector<Point>& line) {
     const Point delta(.5f, .5f);
@@ -134,7 +134,8 @@ static void extract(const float* data, size_t w, size_t h,
 }
 
 /// Level lines extraction algorithm
-void extract(const float* data, size_t w, size_t h, float offset, float step,
+void extract(const unsigned char* data, size_t w, size_t h,
+             float offset, float step,
              std::list<LevelLine>& ll) {
     std::vector<bool> visit(w*h, false);
     for(float l=offset; l<255.0f; l+=step) {
@@ -149,7 +150,6 @@ void extract(const float* data, size_t w, size_t h, float offset, float step,
                     ll.push_back(line);
                     Point p(j+linear(data[i*w+j],l,data[i*w+j+1]), (float)i);
                     extract(data,w,h, visit, l, p, ll.back().line);
-                    
                 }
         if(found) // Reinit for next level
             std::fill(visit.begin(), visit.end(), false);
