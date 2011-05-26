@@ -331,9 +331,9 @@ unsigned char *read_png_u8_gray(const char *fname, size_t * nxp, size_t * nyp)
         ptr_gray = img;
         ptr_end = ptr_gray + *nxp * *nyp;
         while (ptr_gray < ptr_end)
-            *ptr_gray++ = (unsigned char) (6969 * *ptr_r++
-                                           + 23434 * *ptr_g++
-                                           + 2365 * *ptr_b++) / 32768;
+            *ptr_gray++ = (unsigned char) ((6969 * *ptr_r++
+                                            + 23434 * *ptr_g++
+                                            + 2365 * *ptr_b++) / 32768);
         /* resize and return the image */
         img = realloc(img, *nxp * *nyp * sizeof(unsigned char));
         return img;
