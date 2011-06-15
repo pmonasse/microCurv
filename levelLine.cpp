@@ -104,7 +104,7 @@ static bool follow(const unsigned char* data, size_t w, size_t h,
     bool left = (dual.level[2]<l);
     if(left && right) { // saddle point: test l<saddle_level without division
         float num=dual.numSaddle(), denom=dual.denomSaddle();
-        right = ((denom>0 && l*denom<num) || (denom<0 && l*denom>num));
+        right = (denom>0)? (l*denom<num): (l*denom>num);
         left = !right;
     }
     int base=1;
