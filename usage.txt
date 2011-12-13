@@ -1,0 +1,3 @@
+./extractLines ~/Data/MM/images/corporate_center.png 0.5 10 titi.txt
+flreadasc 2 titi.flists < titi.txt
+fkview titi.flists
