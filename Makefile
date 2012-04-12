@@ -11,4 +11,4 @@ main.o : main.cpp levelLine.h io_png.h
 	g++ -c -g main.cpp
 
 extractLines : main.o levelLine.o io_png.o
-	g++ -o extractLines -lpng main.o levelLine.o io_png.o
+	g++ -o extractLines main.o levelLine.o io_png.o -lpng
