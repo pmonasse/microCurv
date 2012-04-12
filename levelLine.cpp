@@ -1,5 +1,6 @@
 #include "levelLine.h"
 #include <algorithm>
+#include <cmath>
 #include <cassert>
 
 /// North, West, South, East: direction of entry/exit in a dual pixel
@@ -50,6 +51,7 @@ private:
     void complete();
     float numSaddle() const; ///< Numerator of saddle value
     float denomSaddle() const; ///< Denominator of saddle value
+    void find_corner(const Point& p, float l) const;
     bool mark_visit(std::vector<bool>& visit) const;
 };
 
@@ -93,6 +95,31 @@ inline float DualPixel::denomSaddle() const {
     return ((float)level[0]+level[2]-level[1]-level[3]);
 }
 
+inline float sign(float f) {
+    return (f>0)? +1: -1;
+}
+
+/// Find extremal curvature point on hyperbola branch
+void DualPixel::find_corner(const Point& p, float l) const {
+    float N=numSaddle(), D=denomSaddle();
+    if(_d != S) return; // For the moment, only handle south orientation
+    if(D*D<1e-4) return; // Degenerate hyperbola
+    float delta = (D*l-N)/(D*D);
+    float xs = (level[0]-level[1])/D;
+    float ys = (level[0]-level[3])/D;
+    float s1 = sign((p.x-vertex[0].x)-xs);
+    float s2 = sign(delta);
+    delta = s1*sqrt(s2*delta);
+    xs += delta;
+    ys += s2*delta;
+    if(0<xs && xs<1 &&
+       0<ys && ys<1) {
+        xs += vertex[0].x;
+        ys += vertex[0].y;
+        return;
+    }
+}
+
 /// Mark the edge as "visited", return \c false if already visited.
 bool DualPixel::mark_visit(std::vector<bool>& visit) const {
     bool cont=true;
@@ -111,6 +138,7 @@ bool DualPixel::mark_visit(std::vector<bool>& visit) const {
 bool DualPixel::follow(std::vector<bool>& visit, float l, Point& p) {
     complete();
     bool cont=mark_visit(visit);
+    find_corner(p, l);
     assert(level[0]<l && l<level[3]);
     bool right= (l<level[1]);
     bool left = (level[2]<l);
