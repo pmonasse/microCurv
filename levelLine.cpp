@@ -73,27 +73,6 @@ DualPixel::DualPixel(Point& p, float l, const unsigned char* im, size_t w)
     p += linear(level[0],l,level[3])*delta[_d+1]; // Safe: delta[4]==delta[0]
 }
 
-// Update fields vertex and level, knowing whether we turn.
-void DualPixel::update(bool left, bool right) {
-    int base= (right? 0: (left? 2:1));
-    if(! right) {
-        vertex[0] = vertex[base];
-        level[0] = level[base];
-    }
-    if(! left) {
-        vertex[3] = vertex[++base];
-        level[3] = level[base];
-    }
-    Dir d=_d;
-    Point p=vertex[0];
-    for(int i=1; i<=2; i++) {
-        p += delta[d];
-        if(++d==4) d=0;
-        level[i] = _im[(size_t)p.y*_w+(size_t)p.x];
-        vertex[i] = p;
-    }
-}
-
 /// The saddle value can be expressed as a fraction. This is its numerator.
 inline float DualPixel::numSaddle() const {
     return (level[0]*(float)level[2]-level[1]*(float)level[3]);
@@ -136,15 +115,25 @@ bool DualPixel::find_corner(Point& p, float l) const {
     return true;
 }
 
-/// Mark the edge as "visited", return \c false if already visited.
-bool DualPixel::mark_visit(std::vector<bool>& visit) const {
-    bool cont=true;
-    if(_d==S) {
-        size_t i = (size_t)vertex[0].y*_w+(size_t)vertex[0].x;
-        cont = !visit[i];
-        visit[i] = true;
+// Update fields vertex and level, knowing whether we turn.
+void DualPixel::update(bool left, bool right) {
+    int base= (right? 0: (left? 2:1));
+    if(! right) {
+        vertex[0] = vertex[base];
+        level[0] = level[base];
     }
-    return cont;
+    if(! left) {
+        vertex[3] = vertex[++base];
+        level[3] = level[base];
+    }
+    Dir d=_d;
+    Point p=vertex[0];
+    for(int i=1; i<=2; i++) {
+        p += delta[d];
+        if(++d==4) d=0;
+        level[i] = _im[(size_t)p.y*_w+(size_t)p.x];
+        vertex[i] = p;
+    }
 }
 
 /// Find exit point of level line in dual pixel entering at \a p.
@@ -166,6 +155,17 @@ void DualPixel::follow( Point& p, float l, std::vector<Point>& line) {
     update(left,right);
     float coord = linear(level[0], l, level[3]);
     p = vertex[0] + coord*delta[_d+1]; // Safe: delta[4]==delta[0]
+}
+
+/// Mark the edge as "visited", return \c false if already visited.
+bool DualPixel::mark_visit(std::vector<bool>& visit) const {
+    bool cont=true;
+    if(_d==S) {
+        size_t i = (size_t)vertex[0].y*_w+(size_t)vertex[0].x;
+        cont = !visit[i];
+        visit[i] = true;
+    }
+    return cont;
 }
 
 /// Extract line at level l
