@@ -25,6 +25,11 @@ inline Point& operator+=(Point& p1, Point p2) {
     return p1;
 }
 
+/// Vector subtraction
+inline Point operator-(Point p1, Point p2) {
+    return Point(p1.x-p2.x, p1.y-p2.y);
+}
+
 /// Vector multiplication
 inline Point operator*(float f, Point p) {
     return Point(f*p.x, f*p.y);
@@ -41,7 +46,7 @@ std::ostream& operator<<(std::ostream& str, const LevelLine& l) {
 /// A dual pixel, square whose vertices are 4 data points
 struct DualPixel {
     DualPixel(Point& p, float l, const unsigned char* im, size_t w);
-    void follow(Point& p, float l, std::vector<Point>& line);
+    void follow(Point& p, float l, int ptsPixel, std::vector<Point>& line);
     bool mark_visit(std::vector<bool>& visit) const;
     unsigned char level[4];
     Point vertex[4];
@@ -52,7 +57,9 @@ private:
     void update(bool left, bool right);
     float numSaddle() const; ///< Numerator of saddle value
     float denomSaddle() const; ///< Denominator of saddle value
-    bool find_corner(Point& p, float l) const;
+    bool find_corner(Point& p, float l, Point& s, float& delta) const;
+    void sample(const Point& p1, const Point& p2, int ptsPixel,
+                const Point& s, float delta, std::vector<Point>& line);
 };
 
 /// Return x for y=v on line joining (0,v0) and (1,v1).
@@ -88,31 +95,56 @@ inline float sign(float f) {
 }
 
 /// Find extremal curvature point on hyperbola branch
-bool DualPixel::find_corner(Point& p, float l) const {
+bool DualPixel::find_corner(Point& p, float l, Point& s, float& delta) const {
     float D=denomSaddle();
     if(D*D<1e-4) return false; // Degenerate hyperbola
-    float delta = (D*l-numSaddle())/(D*D);
+    delta = (D*l-numSaddle())/(D*D);
     bool vert = (_d==S||_d==N); // Vertical direction?
     if(! vert) { D=-D; delta=-delta; }
 #define MOD4(d) ((d)&0x3) // Modulo 4
     int base=MOD4(S-_d+4); // S->0, E->3, N->2, W->1
-    Point s((level[base]-level[MOD4(base+1)])/D,
-            (level[base]-level[MOD4(base+3)])/D);
+    s.x = (level[base]-level[MOD4(base+1)])/D;
+    s.y = (level[base]-level[MOD4(base+3)])/D;
+    s += vertex[base];
 #undef MOD4
-    float s1 = vert?
-        sign((p.x-vertex[base].x)-s.x):
-        sign((p.y-vertex[base].y)-s.y);
+    float s1 = vert? sign(p.x-s.x): sign(p.y-s.y);
     float s2 = sign(delta);
-    delta = s1*sqrt(s2*delta);
+    float d = s1*sqrt(s2*delta);
     s1 = 1;
     if(! vert) std::swap(s1,s2);
-    s.x += s1*delta;
-    s.y += s2*delta;
-    if(! (0<s.x && s.x<1 &&
-          0<s.y && s.y<1))
-        return false;
-    p = vertex[base] + s;
-    return true;
+    p = s;
+    p.x += s1*d;
+    p.y += s2*d;
+    return (vertex[base].x<p.x && p.x<vertex[base].x+1 &&
+            vertex[base].y<p.y && p.y<vertex[base].y+1);
+}
+
+/// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta
+void DualPixel::sample(const Point& p1, const Point& p2, int ptsPixel,
+                       const Point& s, float delta, std::vector<Point>& line) {
+    if(ptsPixel<2) return;
+    Point p = p2-p1;
+    if(p.x<0) p.x=-p.x;
+    if(p.y<0) p.y=-p.y;
+    if(p.x>p.y) { // Uniform sample along x
+        int n = int(p.x*ptsPixel+0.99f);
+        float dx = (p2.x-p1.x)/n;
+        p = p1;
+        for(int i=1; i<n; i++) {
+            p.x += dx;
+            p.y = s.y + delta/(p.x-s.x);
+            line.push_back(p);
+        }
+    } else { // Uniform sample along y
+        int n = int(p.y*ptsPixel+0.99f);
+        float dy = (p2.y-p1.y)/n;
+        p = p1;
+        for(int i=1; i<n; i++) {
+            p.y += dy;
+            p.x = s.x + delta/(p.y-s.y);
+            line.push_back(p);
+        }
+    }
 }
 
 // Update fields vertex and level, knowing whether we turn.
@@ -138,11 +170,12 @@ void DualPixel::update(bool left, bool right) {
 
 /// Find exit point of level line in dual pixel entering at \a p.
 /// Return false if it closes the level line.
-void DualPixel::follow( Point& p, float l, std::vector<Point>& line) {
+void DualPixel::follow(Point& p, float l, int ptsPixel,
+                       std::vector<Point>& line) {
     assert(level[0]<l && l<level[3]);
-    Point c(p);
-    if( find_corner(c,l) )
-        line.push_back(c);
+    Point b(p), m(p), s(p); // b=init, m=corner, s=saddle
+    float xy = sqrt(-1.0); // NaN
+    bool corner = (ptsPixel>0) && find_corner(m,l,s,xy);
     bool right= (l<level[1]);
     bool left = (level[2]<l);
     if(left && right) { // saddle point: test l<saddle_level without division
@@ -155,6 +188,13 @@ void DualPixel::follow( Point& p, float l, std::vector<Point>& line) {
     update(left,right);
     float coord = linear(level[0], l, level[3]);
     p = vertex[0] + coord*delta[_d+1]; // Safe: delta[4]==delta[0]
+    if(xy == xy) { // Hyperbola: do not sample otherwise (ie, straight)
+        if(corner) { // Sample until corner point m
+            sample(b,m, ptsPixel, s,xy, line);
+            line.push_back(b=m);
+        }
+        sample(b,p, ptsPixel, s,xy, line); // Sample until end point
+    }
 }
 
 /// Mark the edge as "visited", return \c false if already visited.
@@ -170,13 +210,13 @@ bool DualPixel::mark_visit(std::vector<bool>& visit) const {
 
 /// Extract line at level l
 static void extract(const unsigned char* data, size_t w,
-                    std::vector<bool>& visit, float l,
+                    std::vector<bool>& visit, float l, int ptsPixel,
                     Point p, std::vector<Point>& line) {
     DualPixel dual(p, l, data, w);
     for(bool cont=true; cont;) {
         line.push_back(p);
         cont = dual.mark_visit(visit);
-        dual.follow(p,l,line);
+        dual.follow(p,l,ptsPixel,line);
     }
     const Point delta(.5f, .5f);
     for(std::vector<Point>::iterator it=line.begin(); it!=line.end(); ++it)
@@ -185,7 +225,7 @@ static void extract(const unsigned char* data, size_t w,
 
 /// Level lines extraction algorithm
 void extract(const unsigned char* data, size_t w, size_t h,
-             float offset, float step,
+             float offset, float step, int ptsPixel,
              std::list<LevelLine>& ll) {
     std::vector<bool> visit(w*h, false);
     for(float l=offset; l<255.0f; l+=step) {
@@ -199,7 +239,7 @@ void extract(const unsigned char* data, size_t w, size_t h,
                     line.level=l;
                     ll.push_back(line);
                     Point p((float)j,(float)i);
-                    extract(data,w, visit, l, p, ll.back().line);
+                    extract(data,w, visit, l, ptsPixel, p, ll.back().line);
                 }
             ++it;
         }

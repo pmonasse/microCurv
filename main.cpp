@@ -1,4 +1,5 @@
 #include "levelLine.h"
+#include "cmdLine.h"
 #include "io_png.h"
 #include <sstream>
 #include <fstream>
@@ -16,8 +17,15 @@ static void blank_border(unsigned char* data, size_t w, size_t h) {
 }
 
 int main(int argc, char** argv) {
+    CmdLine cmd;
+    int ptsPixel=1;
+    cmd.add( make_option('p', ptsPixel, "precision") );
+    try {
+        cmd.process(argc, argv);
+    } catch(std::string s) { std::cout << s << std::endl; }
     if(argc != 5) {
         std::cout << "Usage: " << argv[0]
+                  << "[-p|--precision prec] "
                   << " im.png offset step lines.txt"<<std::endl;
         return 1;
     }
@@ -43,7 +51,7 @@ int main(int argc, char** argv) {
     // Work
     blank_border(data, w, h);
     std::list<LevelLine> ll;
-    extract(data, w, h, offset, step, ll);
+    extract(data, w, h, offset, step, ptsPixel, ll);
 
     // Output
     std::ofstream file(argv[4]);

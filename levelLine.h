@@ -19,7 +19,7 @@ struct LevelLine {
 std::ostream& operator<<(std::ostream& str, const LevelLine& line);
 
 void extract(const unsigned char* data, size_t w, size_t h,
-             float offset, float step,
+             float offset, float step, int ptsPixel,
              std::list<LevelLine>& ll);
 
 #endif
