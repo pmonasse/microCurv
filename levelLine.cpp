@@ -1,5 +1,4 @@
 #include "levelLine.h"
-#include <algorithm>
 #include <cmath>
 #include <cassert>
 
@@ -13,17 +12,6 @@ static const Point delta[] = {Point(0,+1), //S
                               Point(0,-1), //N
                               Point(-1,0), //W
                               Point(0,+1)};//S again, to avoid modulo
-
-/// Vector addition
-inline Point operator+(Point p1, Point p2) {
-    return Point(p1.x+p2.x, p1.y+p2.y);
-}
-
-inline Point& operator+=(Point& p1, Point p2) {
-    p1.x += p2.x;
-    p1.y += p2.y;
-    return p1;
-}
 
 /// Vector subtraction
 inline Point operator-(Point p1, Point p2) {
@@ -47,7 +35,9 @@ std::ostream& operator<<(std::ostream& str, const LevelLine& l) {
 struct DualPixel {
     DualPixel(Point& p, float l, const unsigned char* im, size_t w);
     void follow(Point& p, float l, int ptsPixel, std::vector<Point>& line);
-    bool mark_visit(std::vector<bool>& visit) const;
+    bool mark_visit(std::vector<bool>& visit,
+                    std::vector< std::vector<Inter> >* inter, size_t idx,
+                    const Point& p) const;
     unsigned char level[4];
     Point vertex[4];
 private:
@@ -198,36 +188,46 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
 }
 
 /// Mark the edge as "visited", return \c false if already visited.
-bool DualPixel::mark_visit(std::vector<bool>& visit) const {
+bool DualPixel::mark_visit(std::vector<bool>& visit,
+                           std::vector< std::vector<Inter> >* inter,
+                           size_t idx, const Point& p) const {
     bool cont=true;
     if(_d==S) {
         size_t i = (size_t)vertex[0].y*_w+(size_t)vertex[0].x;
         cont = !visit[i];
         visit[i] = true;
     }
+    if(inter && cont && (_d==S||_d==N))
+        (*inter)[(size_t)p.y].push_back( Inter(p.x,idx) );
     return cont;
 }
 
 /// Extract line at level l
 static void extract(const unsigned char* data, size_t w,
-                    std::vector<bool>& visit, float l, int ptsPixel,
-                    Point p, std::vector<Point>& line) {
-    DualPixel dual(p, l, data, w);
+                    std::vector<bool>& visit, int ptsPixel,
+                    Point p, LevelLine& ll, size_t idx,
+                    std::vector< std::vector<Inter> >* inter) {
+    DualPixel dual(p, ll.level, data, w);
     for(bool cont=true; cont;) {
-        line.push_back(p);
-        cont = dual.mark_visit(visit);
-        dual.follow(p,l,ptsPixel,line);
+        ll.line.push_back(p);
+        cont = dual.mark_visit(visit,inter,idx,p);
+        dual.follow(p,ll.level,ptsPixel,ll.line);
     }
     const Point delta(.5f, .5f);
-    for(std::vector<Point>::iterator it=line.begin(); it!=line.end(); ++it)
+    for(std::vector<Point>::iterator it=ll.line.begin(); it!=ll.line.end();++it)
         *it += delta;
 }
 
 /// Level lines extraction algorithm
 void extract(const unsigned char* data, size_t w, size_t h,
              float offset, float step, int ptsPixel,
-             std::list<LevelLine>& ll) {
+             std::vector<LevelLine*>& ll,
+             std::vector< std::vector<Inter> >* inter) {
     std::vector<bool> visit(w*h, false);
+    if(inter) {
+        assert(inter->empty());
+        inter->resize(w);
+    }
     for(float l=offset; l<255.0f; l+=step) {
         bool found=false;
         std::vector<bool>::const_iterator it=visit.begin();
@@ -235,11 +235,10 @@ void extract(const unsigned char* data, size_t w, size_t h,
             for(size_t j=0; j+1<w; j++, ++it)
                 if(data[i*w+j]<l && l<data[i*w+j+1] && !*it) {
                     found = true;
-                    LevelLine line;
-                    line.level=l;
-                    ll.push_back(line);
+                    LevelLine* line = new LevelLine(l);
                     Point p((float)j,(float)i);
-                    extract(data,w, visit, l, ptsPixel, p, ll.back().line);
+                    extract(data,w, visit, ptsPixel, p, *line, ll.size(),inter);
+                    ll.push_back(line);
                 }
             ++it;
         }

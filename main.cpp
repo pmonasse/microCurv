@@ -1,9 +1,8 @@
-#include "levelLine.h"
+#include "lltree.h"
+#include "fill_curve.h"
 #include "cmdLine.h"
 #include "io_png.h"
-#include <sstream>
 #include <fstream>
-#include <cstdlib>
 
 /// Put one pixel wide blank strips at border of image
 static void blank_border(unsigned char* data, size_t w, size_t h) {
@@ -19,14 +18,21 @@ static void blank_border(unsigned char* data, size_t w, size_t h) {
 int main(int argc, char** argv) {
     CmdLine cmd;
     int ptsPixel=1;
+    float offset=0.5f, step=10.0f;
+    std::string imgOut;
     cmd.add( make_option('p', ptsPixel, "precision") );
+    cmd.add( make_option('o', offset, "offset") );
+    cmd.add( make_option('s', step, "step") );
+    cmd.add( make_option('r', imgOut, "reconstruct") );
     try {
         cmd.process(argc, argv);
     } catch(std::string s) { std::cout << s << std::endl; }
-    if(argc != 5) {
+    if(argc!=3) {
         std::cout << "Usage: " << argv[0]
                   << "[-p|--precision prec] "
-                  << " im.png offset step lines.txt"<<std::endl;
+                  << "[-o|--offset o] "
+                  << "[-s|--step s] "
+                  << "im.png lines.txt" <<std::endl;
         return 1;
     }
 
@@ -38,27 +44,24 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    float offset, step;
-    if((std::istringstream(argv[2])>>offset).fail()) {
-        std::cout <<"Unable to interpret "<<argv[2]<< " as number" <<std::endl;
-        return 1;
-    }
-    if((std::istringstream(argv[3])>>step).fail()) {
-        std::cout <<"Unable to interpret "<<argv[3]<< " as number" <<std::endl;
-        return 1;
-    }
-
     // Work
     blank_border(data, w, h);
-    std::list<LevelLine> ll;
-    extract(data, w, h, offset, step, ptsPixel, ll);
+    LLTree tree(data,w,h, offset,step,ptsPixel);
 
     // Output
-    std::ofstream file(argv[4]);
-    std::list<LevelLine>::const_iterator it;
-    for(it=ll.begin(); it!=ll.end(); ++it)
-        file << *it << "e" <<std::endl; //as required by megwave2's flreadasc
-    file << "q" <<std::endl; //as required by megwave2's flreadasc
+    std::ofstream file(argv[2]);
+    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+        file << *it->ll << "e" <<std::endl; // Required by megwave2's flreadasc
+    file << "q" <<std::endl; // Required by megwave2's flreadasc
+
+    if(!imgOut.empty()) {
+        std::fill(data, data+w*h, 0);
+        std::vector< std::vector<float> > inter;
+        for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+            fill_curve(it->ll->line, (unsigned char)it->ll->level,
+                       data,w,h, &inter);
+        write_png_u8(imgOut.c_str(), data, w, h, 1);
+    }
 
     free(data);
     return 0;
