@@ -208,9 +208,10 @@ static void extract(const unsigned char* data, size_t w,
                     Point p, LevelLine& ll, size_t idx,
                     std::vector< std::vector<Inter> >* inter) {
     DualPixel dual(p, ll.level, data, w);
-    for(bool cont=true; cont;) {
+    while(true) {
         ll.line.push_back(p);
-        cont = dual.mark_visit(visit,inter,idx,p);
+        if(! dual.mark_visit(visit,inter,idx,p))
+            break;
         dual.follow(p,ll.level,ptsPixel,ll.line);
     }
     const Point delta(.5f, .5f);
