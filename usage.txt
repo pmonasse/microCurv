@@ -1,3 +1,2 @@
-./extractLines ~/Data/MM/images/corporate_center.png 0.5 10 titi.txt
-flreadasc 2 titi.flists < titi.txt
-fkview titi.flists
+./extractLines -r out.png -o 0.5 -s 20 -l 1 ~/Data/MM/images/corporate_center.png titi.txt
+flreadasc 2 titi.flists < titi.txt && fkview titi.flists

@@ -1,5 +1,6 @@
 #include "lltree.h"
 #include "fill_curve.h"
+#include "gass.h"
 #include "cmdLine.h"
 #include "io_png.h"
 #include <fstream>
@@ -15,23 +16,37 @@ static void blank_border(unsigned char* data, size_t w, size_t h) {
         data[i] = 0;
 }
 
+static void smooth(std::vector<Point>& line, double lastScale) {
+    std::vector<DPoint> dline;
+    for(std::vector<Point>::iterator it=line.begin(); it!=line.end(); ++it)
+        dline.push_back( DPoint((double)it->x,(double)it->y) );
+    assert(dline.front()==dline.back());
+    gass(dline, 0.0, lastScale);
+    line.clear();
+    for(std::vector<DPoint>::iterator it=dline.begin(); it!=dline.end(); ++it)
+        line.push_back( Point((float)it->x,(float)it->y) );
+}
+
 int main(int argc, char** argv) {
     CmdLine cmd;
     int ptsPixel=1;
     float offset=0.5f, step=10.0f;
+    double lastScale=0;
     std::string imgOut;
     cmd.add( make_option('p', ptsPixel, "precision") );
     cmd.add( make_option('o', offset, "offset") );
     cmd.add( make_option('s', step, "step") );
     cmd.add( make_option('r', imgOut, "reconstruct") );
+    cmd.add( make_option('l', lastScale) );
     try {
         cmd.process(argc, argv);
     } catch(std::string s) { std::cout << s << std::endl; }
     if(argc!=3) {
-        std::cout << "Usage: " << argv[0]
+        std::cout << "Usage: " << argv[0] << ' '
                   << "[-p|--precision prec] "
                   << "[-o|--offset o] "
                   << "[-s|--step s] "
+                  << "[-l lastScale]"
                   << "im.png lines.txt" <<std::endl;
         return 1;
     }
@@ -47,6 +62,12 @@ int main(int argc, char** argv) {
     // Work
     blank_border(data, w, h);
     LLTree tree(data,w,h, offset,step,ptsPixel);
+
+    //Smooth
+    if(lastScale>0)
+        for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+            smooth(it->ll->line, lastScale);
+
 
     // Output
     std::ofstream file(argv[2]);
