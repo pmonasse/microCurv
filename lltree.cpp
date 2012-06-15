@@ -81,7 +81,7 @@ void LLTree::complete() {
             it->sibling = it->parent->child;
             it->parent->child = &(*it);
         } else {
-            assert(!root_);
+            it->sibling = root_;
             root_ = &(*it);
         }
 }
