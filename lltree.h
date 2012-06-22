@@ -3,6 +3,8 @@
 
 #include "levelLine.h"
 
+typedef enum {PreOrder, PostOrder} TreeTraversal;
+
 /// Tree structure of level lines
 class LLTree {
 public:
@@ -13,8 +15,10 @@ public:
     };
     class iterator {
         Node* n;
+        TreeTraversal order;
+        void goBottom();
     public:
-        iterator(Node* node);
+        iterator(Node* node, TreeTraversal o=PreOrder);
         Node& operator*() const;
         Node* operator->() const;
         bool operator==(const iterator&) const;
@@ -22,7 +26,7 @@ public:
         iterator& operator++();
     };
 
-    iterator begin() { return iterator(root_); }
+    iterator begin(TreeTraversal o=PreOrder) { return iterator(root_,o); }
     iterator end() { return iterator(0); }
 
     LLTree(const unsigned char* data, size_t w, size_t h,
