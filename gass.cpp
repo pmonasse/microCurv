@@ -28,7 +28,7 @@
 #include <cassert>
 
 #define ABS(x)       ( (x)>0?(x):-(x) )
-#define SGN(x)       (((x)==0.0)?0:(((x)>0.0)?(1):(-1)))
+#define SGN(x)       (((x)==0.0)? 0: (((x)>0.0)?1: -1))
 
 inline double det3(const DPoint* a, const DPoint* b, const DPoint* c) {
     return ((b->x-a->x)*(c->y-a->y) - (b->y-a->y)*(c->x-a->x));
