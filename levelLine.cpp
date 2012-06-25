@@ -227,7 +227,7 @@ void extract(const unsigned char* data, size_t w, size_t h,
     std::vector<bool> visit(w*h, false);
     if(inter) {
         assert(inter->empty());
-        inter->resize(w);
+        inter->resize(h);
     }
     for(float l=offset; l<255.0f; l+=step) {
         bool found=false;
