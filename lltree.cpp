@@ -61,7 +61,7 @@ LLTree::LLTree(const unsigned char* data, size_t w, size_t h,
     extract(data,w,h, offset,step,ptsPixel, ll, &inter);
     // Create nodes
     for(std::vector<LevelLine*>::iterator it=ll.begin(); it!=ll.end(); ++it)
-        nodes.push_back( Node(*it) );
+        nodes_.push_back( Node(*it) );
     // Build hierarchy (parent field only)
     std::vector< std::vector<Inter> >::iterator it = inter.begin();
     for(; it!=inter.end(); ++it) { // Iterate over image lines
@@ -70,14 +70,14 @@ LLTree::LLTree(const unsigned char* data, size_t w, size_t h,
         std::vector<Inter>::const_iterator it2=it->begin();
         for(; it2!=it->end(); ++it2) { // Intersections with current line
             if(stack.empty()) { // Root of the tree
-                assert(!nodes[it2->second].parent);
+                assert(!nodes_[it2->second].parent);
                 stack.push(it2->second);
             } else if(stack.top()==it2->second) // Getting out of innermost line
                 stack.pop();
             else { // Getting in a line
-                assert(!nodes[it2->second].parent ||
-                       nodes[it2->second].parent == &nodes[stack.top()]);
-                nodes[it2->second].parent = &nodes[stack.top()];
+                assert(!nodes_[it2->second].parent ||
+                       nodes_[it2->second].parent == &nodes_[stack.top()]);
+                nodes_[it2->second].parent = &nodes_[stack.top()];
                 stack.push(it2->second);
             }
         }
@@ -88,14 +88,14 @@ LLTree::LLTree(const unsigned char* data, size_t w, size_t h,
 
 /// Destructor
 LLTree::~LLTree() {
-    for(std::vector<Node>::iterator it=nodes.begin(); it!=nodes.end(); ++it)
+    for(std::vector<Node>::iterator it=nodes_.begin(); it!=nodes_.end(); ++it)
         delete it->ll;
 }
 
 /// Fill root_ and fields child, sibling of all nodes, using field parent only.
 void LLTree::complete() {
-    std::vector<Node>::iterator it=nodes.begin();
-    for(; it!=nodes.end(); ++it)
+    std::vector<Node>::iterator it=nodes_.begin();
+    for(; it!=nodes_.end(); ++it)
         if(it->parent) {
             it->sibling = it->parent->child;
             it->parent->child = &(*it);

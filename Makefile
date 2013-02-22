@@ -13,6 +13,8 @@ lltree.o : lltree.cpp lltree.h levelLine.h
 	g++ -c -g lltree.cpp
 gass.o : gass.cpp gass.h
 	g++ -c -g gass.cpp
+mirror.o : mirror.cpp mirror.h
+	g++ -c -g mirror.cpp
 main.o : main.cpp gass.h fill_curve.h lltree.h levelLine.h cmdLine.h io_png.h
 	g++ -c -g main.cpp
 

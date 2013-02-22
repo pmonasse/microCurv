@@ -46,7 +46,8 @@ int main(int argc, char** argv) {
                   << "[-p|--precision prec] "
                   << "[-o|--offset o] "
                   << "[-s|--step s] "
-                  << "[-l lastScale]"
+                  << "[-r|--reconstruct out.png] "
+                  << "[-l lastScale] "
                   << "im.png lines.txt" <<std::endl;
         return 1;
     }
@@ -68,11 +69,10 @@ int main(int argc, char** argv) {
         for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
             smooth(it->ll->line, lastScale);
 
-
     // Output
     std::ofstream file(argv[2]);
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-        file << *it->ll << "e" <<std::endl; // Required by megwave2's flreadasc
+        file << *it->ll << "e" <<std::endl; // Required by megawave2's flreadasc
     file << "q" <<std::endl; // Required by megwave2's flreadasc
 
     if(!imgOut.empty()) {

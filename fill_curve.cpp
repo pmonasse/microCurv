@@ -60,7 +60,8 @@ static void init_inter(std::vector< std::vector<float> >& inter, size_t size)
 
 /// Add bound of interval on line iy at position x
 static void bound(std::vector< std::vector<float> >& inter, float x, int iy) {
-    inter[iy].push_back(x);
+    if(0<=iy && iy<inter.size())
+        inter[iy].push_back(x);
 }
 
 /// Add segment to point i to current polyline
@@ -123,12 +124,18 @@ void fill_point(Point p, T value, T* out, size_t w) {
 
 /// Fill line of image
 template <typename T>
-void fill_line(T value, T* im, std::vector<float>& inter) {
+void fill_line(T value, T* im, T* end, std::vector<float>& inter) {
     std::sort(inter.begin(), inter.end());
-    float i = (float)(int)inter.front(); // Integer stored as float
-    im += (int)i;
     bool bIn = false; // inside/outside
-    for(std::vector<float>::const_iterator it=inter.begin();; i++, im++) {
+    std::vector<float>::const_iterator it=inter.begin();
+    for(;it!=inter.end() && *it<0; ++it) // Handle curve outside left boundary
+        bIn = !bIn;
+    if(it==inter.end()) return;
+    if(bIn)
+        std::fill(im, std::min(end,im+(int)*it), value);
+    float i = (float)(int)*it; // Current pixel number (int stored as float)
+    im += (int)i;
+    for(; im<end; i++, im++) {
         while(*it<i) {
             bIn = !bIn;
             if(++it == inter.end()) {
@@ -147,7 +154,7 @@ void fill_inter(T value, T* im, size_t w, size_t h,
                 std::vector< std::vector<float> >& inter) {
     for(int i=0; i<h; i++)
         if(! inter[i].empty())
-            fill_line(value, im+i*w, inter[i]);
+            fill_line(value, im+i*w, im+(i+1)*w, inter[i]);
 }
 
 template <typename T>

@@ -59,6 +59,11 @@ public:
             std::rotate(argv, argv+1, argv+argc);
             argc -= 1;
             return true;
+        } else if(std::string(argv[0]).find(std::string("-")+c)==0) {
+            used = true; // Handle multiple switches in single option
+            std::rotate(argv[0]+1, argv[0]+2,
+                        argv[0]+std::string(argv[0]).size()+1);
+            return true;
         }
         return false;
     }
@@ -78,19 +83,28 @@ public:
     /// Find option in argv[0] and argument in argv[1]. Throw an exception
     /// (type std::string) if the argument cannot be read.
     bool check(int& argc, char* argv[]) {
+        std::string param; int arg=0;
         if(std::string("-")+c==argv[0] ||
            (!longName.empty() && std::string("--")+longName==argv[0])) {
-            std::stringstream str;
             if(argc<=1)
-                throw std::string("Error: Option ")
+                throw std::string("Option ")
                     +argv[0]+" requires argument";
-            str << argv[1];
+            param=argv[1]; arg=2;
+        } else if(std::string(argv[0]).find(std::string("-")+c)==0) {
+            param=argv[0]+2; arg=1;
+        } else if(!longName.empty() &&
+                  std::string(argv[0]).find(std::string("--")+longName+'=')==0){
+            size_t size=(std::string("--")+longName+'=').size();
+            param=std::string(argv[0]).substr(size); arg=1;
+        }
+        if(arg>0) {
+            std::stringstream str(param);
             if((str >> _field).fail() || !str.eof())
-                throw std::string("Error: Unable to interpret ")
-                    +argv[1]+" as argument of "+argv[0];
+                throw std::string("Unable to interpret ")
+                    +param+" as argument of "+argv[0];
             used = true;
-            std::rotate(argv, argv+2, argv+argc);
-            argc -= 2;
+            std::rotate(argv, argv+arg, argv+argc);
+            argc -= arg;
             return true;
         }
         return false;
@@ -149,9 +163,13 @@ public:
                     break;
                 }
             }
-            if(! found) {
-                if(std::string(argv[i]).size()>1 && argv[i][0] == '-')
-                    throw std::string("Unrecognized option ")+argv[i];
+            if(! found) { // A single dash and a negative number are not options
+                if(std::string(argv[i]).size()>1 && argv[i][0] == '-') {
+                    std::istringstream str(argv[i]);
+                    float v;
+                    if(! (str>>v).eof())
+                        throw std::string("Unrecognized option ")+argv[i];
+                }
                 ++i;
             }
         }

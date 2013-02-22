@@ -28,13 +28,14 @@ public:
 
     iterator begin(TreeTraversal o=PreOrder) { return iterator(root_,o); }
     iterator end() { return iterator(0); }
+    std::vector<Node>& nodes() { return nodes_; }
 
     LLTree(const unsigned char* data, size_t w, size_t h,
            float offset, float step, int ptsPixel);
     ~LLTree();
     Node* root() { return root_; }
 private:
-    std::vector<Node> nodes;
+    std::vector<Node> nodes_;
     Node* root_;
     void complete();
 };

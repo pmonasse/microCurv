@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::clock_t t0 = std::clock();
+    std::clock_t t = std::clock();
 
     int margin=20;
     unsigned char* inImage = sym_enlarge(inIm,w,h, margin);
@@ -128,13 +128,30 @@ int main(int argc, char** argv) {
         }
         delete [] ll;
     }
-    std::clock_t t1 = std::clock();
-    std::cout << "Time = " << (t1-t0)/(float)CLOCKS_PER_SEC << std::endl;
+    // Quantize level lines
+    std::vector<LevelLine*> qll;
+    std::vector<bool> positive;
+    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+		if((int)it->ll->level%qstep == 0) {
+            qll.push_back(it->ll);
+            bool up = (it->parent==0 || it->parent->ll->level<it->ll->level);
+            positive.push_back(up);
+        }
+    t = std::clock()-t;
+    std::cout << qll.size() << "/" <<tree.nodes().size() << " level lines. ";
+    std::cout << "Time = " << t/(float)CLOCKS_PER_SEC << std::endl;
 
     std::cout << " 2. Evolve level lines by affine shortening. " <<std::flush;
-    if(last>0)
-        for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-            smooth(it->ll->line, last);
+    if(last>0) {
+        const size_t size=tree.nodes().size();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for(size_t i=0; i<size; i++)
+            smooth(tree.nodes()[i].ll->line, last);
+        //        for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+        //            smooth(it->ll->line, last);
+    }
     if(! outLL.empty()) {
         std::fill(imgLL, imgLL+3*nrow*ncol, 255);
         for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
@@ -149,8 +166,8 @@ int main(int argc, char** argv) {
         delete [] ll;
     }
     delete [] imgLL;
-    std::clock_t t2 = std::clock();
-    std::cout << "Time = " << (t2-t1)/(float)CLOCKS_PER_SEC << std::endl;
+    t = std::clock()-t;
+    std::cout << "Time = " << t/(float)CLOCKS_PER_SEC << std::endl;
 
     std::cout << " 3. Reconstruct LLAS evolution. " << std::flush;
     unsigned char* outImage = new unsigned char[nrow*ncol];
@@ -165,18 +182,10 @@ int main(int argc, char** argv) {
         return 1;
     }
     delete [] outImage;
-    std::clock_t t3 = std::clock();
-    std::cout << "Time = " << (t3-t2)/(float)CLOCKS_PER_SEC << std::endl;
+    t = std::clock()-t;
+    std::cout << "Time = " << t/(float)CLOCKS_PER_SEC << std::endl;
 
     std::cout << " 4. Construct the curvature map. " << std::flush;
-    std::vector<LevelLine*> qll;
-    std::vector<bool> positive;
-    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-		if((int)it->ll->level%qstep == 0) {
-            qll.push_back(it->ll);
-            bool up = (it->parent==0 || it->parent->ll->level<it->ll->level);
-            positive.push_back(up);
-        }
     float* outCurv = new float[nrow*ncol];
     std::fill(outCurv, outCurv+nrow*ncol, 255.0f);
     curv(qll, positive, outCurv,ncol,nrow);
@@ -189,8 +198,8 @@ int main(int argc, char** argv) {
         std::cerr << "Error writing image file " << argv[3] << std::endl;
         return 1;
     }
-    std::clock_t t4 = std::clock();
-    std::cout << "Time = " << (t4-t3)/(float)CLOCKS_PER_SEC << std::endl;
+    t = std::clock()-t;
+    std::cout << "Time = " << t/(float)CLOCKS_PER_SEC << std::endl;
 
     delete [] llas;
     delete [] cmap;
