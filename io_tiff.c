@@ -21,10 +21,10 @@
  * @li read a TIFF file as a deinterlaced float array
  * @li write a float array to a TIFF file
  *
- * @todo: handle multi-channel images and on-the-fly color model conversion
+ * @todo handle multi-channel images and on-the-fly color model conversion
  * @todo add a test suite
- * @todo internally handle RGB/gray conversion in read_png_raw()
- * @todo handle deinterlacing as a libpng transform function
+ * @todo internally handle RGB/gray conversion in read_tiff_raw()
+ * @todo handle deinterlacing as a libtiff transform function
  *
  * @author Pascal Monasse <monasse@imagine.enpc.fr>
  */
@@ -34,12 +34,38 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* option to use a local version of the libtiff */
+#ifdef IO_TIFF_LOCAL_LIBTIFF
+#include "tiffio.h"
+#else
 #include <tiffio.h>
+#endif
 
+/* ensure consistency */
 #include "io_tiff.h"
 
-/* string tag inserted into the binary, helps tracking versions */
-char _io_tiff_tag[] = "using io_tiff " IO_TIFF_VERSION;
+/*
+ * INFO
+ */
+
+/* string tag inserted into the binary */
+static char io_tiff_tag[] = "using io_tiff " IO_TIFF_VERSION;
+/**
+ * @brief helps tracking versions, via the string tag inserted into
+ * the library
+ *
+ * This function is not expected to be used in real-world programs.
+ *
+ * @return a pointer to a version info string
+ */
+char *io_tiff_info(void)
+{
+    return io_tiff_tag;
+}
+
+/*
+ * READ
+ */
 
 /**
  * Read a TIFF float image.
@@ -63,11 +89,9 @@ static float *readTIFF(TIFF * tif, size_t * nx, size_t * ny)
     data = (float *) malloc(w * h * sizeof(float));
     *nx = (size_t) w;
     *ny = (size_t) h;
-    for (i = 0; i < h; i++)
-    {
+    for (i = 0; i < h; i++) {
         line = data + i * w;
-        if (TIFFReadScanline(tif, line, i, 0) < 0)
-        {
+        if (TIFFReadScanline(tif, line, i, 0) < 0) {
             fprintf(stderr, "readTIFF: error reading row %u\n", i);
             free(data);
             return NULL;
@@ -76,6 +100,26 @@ static float *readTIFF(TIFF * tif, size_t * nx, size_t * ny)
 
     return data;
 }
+
+/**
+ * Load TIFF float image.
+ */
+float *io_tiff_read_f32_gray(const char *fname, size_t * nx, size_t * ny)
+{
+    float *data;
+    TIFF *tif = TIFFOpen(fname, "r");
+    if (!tif) {
+        fprintf(stderr, "Unable to read TIFF file %s\n", fname);
+        return NULL;
+    }
+    data = readTIFF(tif, nx, ny);
+    TIFFClose(tif);
+    return data;
+}
+
+/*
+ * WRITE
+ */
 
 /**
  * Write a TIFF float image.
@@ -101,11 +145,9 @@ static int writeTIFF(TIFF * tif, const float *data, size_t w, size_t h,
 
     ok = 1;
     for (k = 0; ok && k < c; k++)
-        for (i = 0; ok && i < h; i++)
-        {
+        for (i = 0; ok && i < h; i++) {
             line = (float *) (data + (i + k * h) * w);
-            if (TIFFWriteScanline(tif, line, (uint32) i, (tsample_t) k) < 0)
-            {
+            if (TIFFWriteScanline(tif, line, (uint32) i, (tsample_t) k) < 0) {
                 fprintf(stderr, "writeTIFF: error writing row %i\n", (int) i);
                 ok = 0;
             }
@@ -114,32 +156,14 @@ static int writeTIFF(TIFF * tif, const float *data, size_t w, size_t h,
 }
 
 /**
- * Load TIFF float image.
- */
-float *read_tiff_f32_gray(const char *fname, size_t * nx, size_t * ny)
-{
-    float *data;
-    TIFF *tif = TIFFOpen(fname, "r");
-    if (!tif)
-    {
-        fprintf(stderr, "Unable to read TIFF file %s\n", fname);
-        return NULL;
-    }
-    data = readTIFF(tif, nx, ny);
-    TIFFClose(tif);
-    return data;
-}
-
-/**
  * Write float image as TIFF 32 bits per sample.
  */
-int write_tiff_f32(const char *fname, const float *data, size_t nx, size_t ny,
-                   size_t nc)
+int io_tiff_write_f32(const char *fname, const float *data,
+                      size_t nx, size_t ny, size_t nc)
 {
     int ok;
     TIFF *tif = TIFFOpen(fname, "w");
-    if (!tif)
-    {
+    if (!tif) {
         fprintf(stderr, "Unable to write TIFF file %s\n", fname);
         return 0;
     }

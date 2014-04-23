@@ -1,3 +1,25 @@
+/**
+ * @file main_extraction.cpp
+ * @brief Extraction of tree of level lines from an image
+ * @author Pascal Monasse <monasse@imagine.enpc.fr>
+ * 
+ * Copyright (c) 2011-2014, Pascal Monasse
+ * All rights reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "lltree.h"
 #include "fill_curve.h"
 #include "gass.h"
@@ -54,7 +76,7 @@ int main(int argc, char** argv) {
 
     // Input
     size_t w, h;
-    unsigned char* data = read_png_u8_gray(argv[1], &w, &h);
+    unsigned char* data = io_png_read_u8_gray(argv[1], &w, &h);
     if(! data) {
         std::cout << "Impossible to read PNG image " << argv[1] <<std::endl;
         return 1;
@@ -81,7 +103,7 @@ int main(int argc, char** argv) {
         for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
             fill_curve(it->ll->line, (unsigned char)it->ll->level,
                        data,w,h, &inter);
-        write_png_u8(imgOut.c_str(), data, w, h, 1);
+        io_png_write_u8(imgOut.c_str(), data, w, h, 1);
     }
 
     free(data);

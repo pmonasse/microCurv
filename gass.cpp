@@ -1,26 +1,25 @@
-/*--------------------------- MegaWave2 Module -----------------------------*/
-/* mwcommand
-   name = {gass};
-   author = {"Lionel Moisan"};
-   version = {"1.1"};
-   function = {"Geometric Affine Scale Space of curves (Dlists)"};
-   usage = {
-
- 'f':[first=0.]->first       "first scale",
- 'l':[last=1.]->last         "last scale",
- 'e':[eps=3.]->eps[2.,13.]   "relative sampling precision (-log10 scale)",
- 's':step->step              "maximal scale step",
- 'n':[n=5]->n                "or minimal number of iterations",
- 'r':r->r                    "bounding box radius (default: minimal)",
- 'v'->v                      "verbose mode",
- in->in                      "input curves (Dlists)",
- out<-out                    "output curves (Dlists)"
-
-            };
-*/
-/*----------------------------------------------------------------------
- v1.1 (04/2007): simplified header (LM)
-----------------------------------------------------------------------*/
+/**
+ * @file gass.cpp
+ * @brief Geometric Affine Scale Space
+ * @author Lionel Moisan <Lionel.Moisan@parisdescartes.fr>
+ *         Pascal Monasse <monasse@imagine.enpc.fr>
+ * 
+ * Copyright (c) 2002, 2012-2014, Lionel Moisan, Pascal Monasse
+ * All rights reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "gass.h"
 #include <cmath>

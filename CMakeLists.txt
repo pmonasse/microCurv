@@ -15,7 +15,7 @@ SET(SRC1
     levelLine.cpp levelLine.h
     lltree.cpp lltree.h
     io_png.c io_png.h
-    main.cpp)
+    main_extraction.cpp)
 ADD_EXECUTABLE(extractLines ${SRC1})
 TARGET_LINK_LIBRARIES(extractLines ${PNG_LIBRARIES})
 
@@ -31,12 +31,13 @@ SET(SRC3
     draw_curve.cpp draw_curve.h
     fill_curve.cpp fill_curve.h
     gass.cpp gass.h
+    image.cpp image.h
     io_png.c io_png.h
     io_tiff.c io_tiff.h
     levelLine.cpp levelLine.h
     lltree.cpp lltree.h
-    mirror.cpp mirror.h
-    microCurv.cpp)
+    microCurv.cpp
+    xmtime.h)
 ADD_EXECUTABLE(microCurv ${SRC3})
 TARGET_LINK_LIBRARIES(microCurv ${PNG_LIBRARIES} ${TIFF_LIBRARIES})
 

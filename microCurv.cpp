@@ -1,15 +1,55 @@
+/**
+ * @file microCurv.cpp
+ * @brief Compute mean curvatures
+ * @author Adina Ciomaga <adina@math.uchicago.edu>
+ *         Pascal Monasse <monasse@imagine.enpc.fr>
+ * 
+ * Copyright (c) 2011-2014, Adina Ciomaga, Pascal Monasse
+ * All rights reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "lltree.h"
 #include "draw_curve.h"
 #include "fill_curve.h"
 #include "gass.h"
 #include "curv.h"
-#include "mirror.h"
+#include "image.h"
 #include "cmdLine.h"
+#include "xmtime.h"
 #include "io_png.h"
 #include "io_tiff.h"
 #include <algorithm>
 #include <cmath>
-#include <ctime>
+
+/// Timer class to measure real time (not CPU time)
+class Timer {
+    unsigned long t; ///< Current time in milliseconds
+public:
+    Timer() { tick(); } ///< Constructor
+    void tick() { t=xmtime(); } ///< Reset time
+    void time() { ///< Display elapsed time and reset current time
+        unsigned long told = t;
+        tick();
+        std::cout << "Time = " << (t-told)/1000.0f << "s" << std::endl;
+    }
+};
+
+/// The image is enlarged by this number of pixels on each side before
+/// extraction of level lines, in order to reduce border effects.
+static const int MARGIN=20;
 
 /// Smooth level line
 static void smooth(std::vector<Point>& line, double lastScale) {
@@ -35,16 +75,53 @@ static void fix_level(LLTree& tree, float offset) {
     }
 }
 
-/// Crop rectangle wxh+x+y from image
-template <typename T>
-static T* crop(const T* in, size_t wIn, size_t hIn, int x, int y, int w, int h,
-               int ch=1) {
-    T* out = new T[ch*w*h];
-    for(int j=0; j<ch; j++, in+=wIn*hIn)
-        for(int i=0; i<h; i++) {
-            const T* p = in+wIn*(y+i)+x;
-            std::copy(p, p+w, out+j*w*h+i*w);
+/// Extract level lines from \a tree at levels multiple of \a qstep.
+///
+/// Output is in \a qll. In addition, orientations are stored in \a positive.
+static void quantize(LLTree& tree, int qstep,
+                     std::vector<LevelLine*>& qll, std::vector<bool>& positive){
+    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+		if((int)it->ll->level%qstep == 0) {
+            qll.push_back(it->ll);
+            bool up = (it->parent==0 || it->parent->ll->level<it->ll->level);
+            positive.push_back(up);
         }
+}
+
+/// Color in blue the level lines of \a tree at a level multiple of \a qstep.
+///
+/// The dimensions of the image are \a w and \a h, but only the crop region \a R
+/// is used to output to file \a fileName.
+static bool output_curves(LLTree& tree, int qstep,
+                          int w, int h, Rect R,
+                          const char* fileName) {
+    unsigned char* imgLL = new unsigned char[3*w*h];
+    std::fill(imgLL, imgLL+3*w*h, 255); // White image
+    // Set R and G channels of pixels on curves at 0, so that they become blue
+    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+        if((int)it->ll->level%qstep == 0)
+            draw_curve(it->ll->line, 0, imgLL, w, h);
+    std::copy(imgLL, imgLL+w*h, imgLL+w*h); // No need to redraw in G, copy R
+
+    unsigned char* ll = crop(imgLL,w,h,R,3);
+    bool ok = (io_png_write_u8(fileName,ll,R.w,R.h,3)==0);
+    if(! ok)
+        std::cerr << "Error writing image file " << fileName << std::endl;
+    delete [] ll;
+    delete [] imgLL;
+    return ok;
+}
+
+/// Reconstruct image from level sets stored in \a tree.
+static unsigned char* reconstruct(LLTree& tree, int w, int h, Rect R) {
+    unsigned char* outImage = new unsigned char[w*h];
+    std::fill_n(outImage, w*h, 0);
+    std::vector< std::vector<float> > inter;
+    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+        fill_curve(it->ll->line,(unsigned char)it->ll->level,
+                   outImage,w,h, &inter);
+    unsigned char* out = crop(outImage,w,h, R);
+    delete [] outImage;
     return out;
 }
 
@@ -69,141 +146,99 @@ bool colorCurv(const unsigned char* in, const float* map, int w, int h,
                 g[i] = fct(-*map);
         }
     }
-    bool ok = (write_png_u8(sFileName,r,w,h,3)==0);
+    bool ok = (io_png_write_u8(sFileName,r,w,h,3)==0);
     delete [] r;
     return ok;
 }
 
+/// Main procedure for curvature microscope.
 int main(int argc, char** argv) {
     int qstep=8;
-    float last=2.0f;
+    float scale=2.0f;
     std::string inLL, outLL, sOutImage;
     CmdLine cmd;
     cmd.add( make_option('q', qstep) );
-    cmd.add( make_option('l', last) );
+    cmd.add( make_option('s', scale) );
     cmd.add( make_option('I', inLL) );
     cmd.add( make_option('O', outLL) );
     cmd.add( make_option('o', sOutImage) );
     cmd.process(argc, argv);
     if(argc!=3 && argc!=4) {
         std::cerr << "Usage: " << argv[0] << ' '
-                  << "[-q qstep] [-l last] [-I inLL] [-O outLL] [-o outImage] "
+                  << "[-q qstep] [-s scale] [-I inLL.png] [-O outLL.png] "
+                  << "[-o outImage.png] "
                   << "in.png outCurv.png [outCurv.tif]" << std::endl;
         return 1;
     }
 
     size_t w, h;
-    unsigned char* inIm = read_png_u8_gray(argv[1], &w, &h);
+    unsigned char* inIm = io_png_read_u8_gray(argv[1], &w, &h);
     if(! inIm) {
         std::cerr << "Unable to open image " << argv[1] << std::endl;
         return 1;
     }
 
-    std::clock_t t = std::clock();
+    Timer timer;
 
-    int margin=20;
-    unsigned char* inImage = sym_enlarge(inIm,w,h, margin);
+    unsigned char* inImage = sym_enlarge(inIm,w,h, MARGIN);
     free(inIm);
-    const int nrow=w+2*margin, ncol=h+2*margin;
-
-    unsigned char* imgLL=0;
-    if(! inLL.empty() || ! outLL.empty())
-        imgLL = new unsigned char[3*nrow*ncol];
+    const Rect R={MARGIN, MARGIN, w, h};
+    const int ncol=w+2*MARGIN, nrow=h+2*MARGIN;
 
     std::cout << " 1. Extract level lines. " << std::flush;
-    float offset=0.5f;
-    LLTree tree(inImage, nrow, ncol, offset, 1.0f, 5);
+    const float offset=0.5f;
+    LLTree tree(inImage, ncol, nrow, offset, 1.0f, 5);
     fix_level(tree, offset);
     delete [] inImage;
-    if(! inLL.empty()) {
-        std::fill(imgLL, imgLL+3*nrow*ncol, 255);
-        for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-            if((int)it->ll->level%qstep == 0)
-                draw_curve(it->ll->line, 0, imgLL, ncol, nrow);
-        std::copy(imgLL, imgLL+ncol*nrow, imgLL+ncol*nrow);
-        unsigned char* ll = crop(imgLL,ncol,nrow, margin,margin,w,h,3);
-        if(! write_png_u8(inLL.c_str(),ll,w,h,3)==0) {
-            std::cerr << "Error writing image file " << inLL << std::endl;
-            return 1;
-        }
-        delete [] ll;
-    }
-    // Quantize level lines
+    if(!inLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,inLL.c_str()))
+        return 1;
+
     std::vector<LevelLine*> qll;
     std::vector<bool> positive;
-    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-		if((int)it->ll->level%qstep == 0) {
-            qll.push_back(it->ll);
-            bool up = (it->parent==0 || it->parent->ll->level<it->ll->level);
-            positive.push_back(up);
-        }
-    t = std::clock()-t;
+    quantize(tree, qstep, qll, positive);
     std::cout << qll.size() << "/" <<tree.nodes().size() << " level lines. ";
-    std::cout << "Time = " << t/(float)CLOCKS_PER_SEC << std::endl;
+    timer.time();
 
-    std::cout << " 2. Evolve level lines by affine shortening. " <<std::flush;
-    if(last>0) {
+    std::cout << " 2. Smooth level lines by affine shortening. " <<std::flush;
+    if(scale>0) {
         const size_t size=tree.nodes().size();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for(size_t i=0; i<size; i++)
-            smooth(tree.nodes()[i].ll->line, last);
-        //        for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-        //            smooth(it->ll->line, last);
+            smooth(tree.nodes()[i].ll->line, scale);
     }
-    if(! outLL.empty()) {
-        std::fill(imgLL, imgLL+3*nrow*ncol, 255);
-        for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-            if((int)it->ll->level%qstep == 0)
-                draw_curve(it->ll->line, 0, imgLL, ncol, nrow);
-        std::copy(imgLL, imgLL+ncol*nrow, imgLL+ncol*nrow);
-        unsigned char* ll = crop(imgLL,ncol,nrow, margin,margin,w,h,3);
-        if(! write_png_u8(outLL.c_str(),ll,w,h,3)==0) {
-            std::cerr << "Error writing image file " << outLL << std::endl;
-            return 1;
-        }
-        delete [] ll;
-    }
-    delete [] imgLL;
-    t = std::clock()-t;
-    std::cout << "Time = " << t/(float)CLOCKS_PER_SEC << std::endl;
+    if(!outLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,outLL.c_str()))
+        return 1;
+    timer.time();
 
     std::cout << " 3. Reconstruct LLAS evolution. " << std::flush;
-    unsigned char* outImage = new unsigned char[nrow*ncol];
-    std::fill_n(outImage, nrow*ncol, 0);
-    std::vector< std::vector<float> > inter;
-    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-        fill_curve(it->ll->line,(unsigned char)it->ll->level,
-                   outImage,ncol,nrow, &inter);
-    unsigned char* llas = crop(outImage,ncol,nrow, margin,margin,w,h);
-    if(! sOutImage.empty() && write_png_u8(sOutImage.c_str(), llas,w,h,1)!=0) {
+    unsigned char* llas = reconstruct(tree, ncol, nrow, R);
+    if(! sOutImage.empty() && io_png_write_u8(sOutImage.c_str(),llas,w,h,1)!=0){
         std::cerr << "Error writing image file " << sOutImage << std::endl;
         return 1;
     }
-    delete [] outImage;
-    t = std::clock()-t;
-    std::cout << "Time = " << t/(float)CLOCKS_PER_SEC << std::endl;
+    timer.time();
 
     std::cout << " 4. Construct the curvature map. " << std::flush;
     float* outCurv = new float[nrow*ncol];
     std::fill(outCurv, outCurv+nrow*ncol, 255.0f);
     curv(qll, positive, outCurv,ncol,nrow);
-    float* cmap = crop(outCurv,ncol,nrow, margin, margin, w, h);
+    float* cmap = crop(outCurv,ncol,nrow, R);
+    delete [] outCurv;
+
     if(! colorCurv(llas, cmap,w,h, argv[2])) {
         std::cerr << "Error writing image file " << argv[2] << std::endl;
         return 1;
     }
-    if(argc>3 && write_tiff_f32(argv[3], cmap,w,h,1)!=0) {
+    if(argc>3 && io_tiff_write_f32(argv[3], cmap,w,h,1)!=0) {
         std::cerr << "Error writing image file " << argv[3] << std::endl;
         return 1;
     }
-    t = std::clock()-t;
-    std::cout << "Time = " << t/(float)CLOCKS_PER_SEC << std::endl;
+    timer.time();
 
     delete [] llas;
     delete [] cmap;
-    delete [] outCurv;
 
     return 0;
 }
