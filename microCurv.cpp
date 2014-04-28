@@ -32,6 +32,7 @@
 #include "io_png.h"
 #include "io_tiff.h"
 #include <algorithm>
+#include <fstream>
 #include <cmath>
 
 /// Timer class to measure real time (not CPU time)
@@ -88,13 +89,30 @@ static void quantize(LLTree& tree, int qstep,
         }
 }
 
-/// Color in blue the level lines of \a tree at a level multiple of \a qstep.
-///
-/// The dimensions of the image are \a w and \a h, but only the crop region \a R
-/// is used to output to file \a fileName.
-static bool output_curves(LLTree& tree, int qstep,
-                          int w, int h, Rect R,
-                          const char* fileName) {
+/// Write in SVG file the level lines of \a tree at level multiple of \a qstep.
+static bool output_svg(LLTree& tree, int qstep, int w, int h, Rect R,
+                       const std::string& fileName) {
+    std::ofstream file(fileName.c_str());
+    file << "<svg xmlns=\"http://www.w3.org/2000/svg\" ";
+    file << "width=\"" << w-R.x << "\" " << "height=\"" << h-R.y << "\" ";
+    file << "viewBox=\"0 0 " << R.w << ' ' << R.h << "\">" << std::endl;
+    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
+        if((int)it->ll->level%qstep == 0) {
+            file << "<polygon stroke=\"blue\" stroke-width=\".5\" ";
+            file << "fill=\"white\" points=\"";
+            std::vector<Point>::const_iterator it2, end=it->ll->line.end();
+            for(it2=it->ll->line.begin(); it2!=end; ++it2) {
+                file << it2->x-R.x << ' ' << it2->y-R.y << ' ';
+            }
+            file << "\" />";
+        }
+    file << "</svg>" << std::endl;
+    return file.good();
+}
+
+/// Write in PNG file the level lines of \a tree at level multiple of \a qstep.
+static bool output_png(LLTree& tree, int qstep, int w, int h, Rect R,
+                       const std::string& fileName) {
     unsigned char* imgLL = new unsigned char[3*w*h];
     std::fill(imgLL, imgLL+3*w*h, 255); // White image
     // Set R and G channels of pixels on curves at 0, so that they become blue
@@ -104,11 +122,25 @@ static bool output_curves(LLTree& tree, int qstep,
     std::copy(imgLL, imgLL+w*h, imgLL+w*h); // No need to redraw in G, copy R
 
     unsigned char* ll = crop(imgLL,w,h,R,3);
-    bool ok = (io_png_write_u8(fileName,ll,R.w,R.h,3)==0);
-    if(! ok)
-        std::cerr << "Error writing image file " << fileName << std::endl;
+    bool ok = (io_png_write_u8(fileName.c_str(),ll,R.w,R.h,3)==0);
     delete [] ll;
     delete [] imgLL;
+    return ok;
+}
+
+/// Color in blue the level lines of \a tree at a level multiple of \a qstep.
+///
+/// The dimensions of the image are \a w and \a h, but only the crop region \a R
+/// is used to output to file \a fileName.
+static bool output_curves(LLTree& tree, int qstep, int w, int h, Rect R,
+                          const std::string& fileName) {
+
+    size_t end = fileName.rfind(".svg");
+    bool ok = (end!=std::string::npos && fileName.size()==end+4)?
+        output_svg(tree, qstep, w, h, R, fileName):
+        output_png(tree, qstep, w, h, R, fileName);
+    if(! ok)
+        std::cerr << "Error writing image file " << fileName << std::endl;
     return ok;
 }
 
@@ -190,7 +222,7 @@ int main(int argc, char** argv) {
     LLTree tree(inImage, ncol, nrow, offset, 1.0f, 5);
     fix_level(tree, offset);
     delete [] inImage;
-    if(!inLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,inLL.c_str()))
+    if(!inLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,inLL))
         return 1;
 
     std::vector<LevelLine*> qll;
@@ -208,7 +240,7 @@ int main(int argc, char** argv) {
         for(size_t i=0; i<size; i++)
             smooth(tree.nodes()[i].ll->line, scale);
     }
-    if(!outLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,outLL.c_str()))
+    if(!outLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,outLL))
         return 1;
     timer.time();
 
