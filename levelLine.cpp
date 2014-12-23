@@ -181,7 +181,6 @@ void DualPixel::update(bool left, bool right) {
 }
 
 /// Find exit point of level line in dual pixel entering at \a p.
-/// Return false if it closes the level line.
 void DualPixel::follow(Point& p, float l, int ptsPixel,
                        std::vector<Point>& line) {
     assert(level[0]<l && l<level[3]);

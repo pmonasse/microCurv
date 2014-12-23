@@ -197,7 +197,8 @@ int main(int argc, char** argv) {
     cmd.process(argc, argv);
     if(argc!=3 && argc!=4) {
         std::cerr << "Usage: " << argv[0] << ' '
-                  << "[-q qstep] [-s scale] [-I inLL.png] [-O outLL.png] "
+                  << "[-q qstep] [-s scale] "
+                  << "[-I inLL.<png|svg>] [-O outLL.<png|svg>] "
                   << "[-o outImage.png] "
                   << "in.png outCurv.png [outCurv.tif]" << std::endl;
         return 1;
