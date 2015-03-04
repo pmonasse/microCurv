@@ -1,14 +1,33 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+cmake_minimum_required(VERSION 2.6)
 
-SET(CPACK_PACKAGE_FILE_NAME "microCurv")
-SET(CPACK_GENERATOR "TGZ")
-INCLUDE(CPack)
+# zlib is needed by libPNG and also by libTIFF, even though the cmake module for
+# libTIFF does not specify that
+find_package(ZLIB)
+if(NOT ZLIB_FOUND)
+  add_subdirectory(third_party/zlib-1.2.8)
+endif(NOT ZLIB_FOUND)
+include_directories(${ZLIB_INCLUDE_DIRS})
 
-FIND_PACKAGE(PNG REQUIRED)
-FIND_PACKAGE(TIFF REQUIRED)
-ADD_DEFINITIONS(${PNG_DEFINITIONS})
+find_package(PNG)
+find_package(TIFF)
 
-SET(SRC1
+if(NOT PNG_FOUND)
+    add_subdirectory(third_party/libpng-1.6.16)
+    include_directories(${PNG_INCLUDE_DIRS})
+endif(NOT PNG_FOUND)
+add_definitions(${PNG_DEFINITIONS})
+
+if(NOT TIFF_FOUND)
+    find_package(JPEG)
+    if(NOT JPEG_FOUND)
+        add_subdirectory(third_party/jpeg-9a)
+    endif(NOT JPEG_FOUND)
+    include_directories(${JPEG_INCLUDE_DIR})
+    add_subdirectory(third_party/tiff-4.0.3)
+    include_directories(${TIFF_INCLUDE_DIR})
+endif(NOT TIFF_FOUND)
+
+set(SRC1
     cmdLine.h
     fill_curve.cpp fill_curve.h
     gass.cpp gass.h
@@ -16,16 +35,16 @@ SET(SRC1
     lltree.cpp lltree.h
     io_png.c io_png.h
     main_extraction.cpp)
-ADD_EXECUTABLE(extractLines ${SRC1})
-TARGET_LINK_LIBRARIES(extractLines ${PNG_LIBRARIES})
+add_executable(extractLines ${SRC1})
+target_link_libraries(extractLines ${PNG_LIBRARIES})
 
-SET(SRC2
+set(SRC2
    gass.cpp gass.h
    levelLine.cpp levelLine.h
    main_gass.cpp)
-ADD_EXECUTABLE(smoothLines ${SRC2})
+add_executable(smoothLines ${SRC2})
 
-SET(SRC3
+set(SRC3
     cmdLine.h
     curv.cpp curv.h
     draw_curve.cpp draw_curve.h
@@ -38,22 +57,17 @@ SET(SRC3
     lltree.cpp lltree.h
     microCurv.cpp
     xmtime.h)
-ADD_EXECUTABLE(microCurv ${SRC3})
-TARGET_LINK_LIBRARIES(microCurv ${PNG_LIBRARIES} ${TIFF_LIBRARIES})
+add_executable(microCurv ${SRC3})
+target_link_libraries(microCurv ${PNG_LIBRARIES} ${TIFF_LIBRARIES})
 
-FIND_PACKAGE(OpenMP)
-IF(OPENMP_FOUND)
-    SET_TARGET_PROPERTIES(microCurv PROPERTIES
+find_package(OpenMP)
+if(OPENMP_FOUND)
+    set_target_properties(microCurv PROPERTIES
                           COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
-ENDIF(OPENMP_FOUND)
+endif(OPENMP_FOUND)
 
-IF(UNIX)
-    IF(OPENMP_FOUND)
-        SET(CMAKE_EXE_LINKER_FLAGS  ${OpenMP_CXX_FLAGS})
-    ENDIF(OPENMP_FOUND)
-    
-ENDIF(UNIX)
-
-LIST(APPEND SRC1 ${SRC2} ${SRC3})
-LIST(REMOVE_DUPLICATES SRC1)
-INSTALL(FILES ${SRC1} CMakeLists.txt DESTINATION .)
+if(UNIX)
+    if(OPENMP_FOUND)
+        set(CMAKE_EXE_LINKER_FLAGS  ${OpenMP_CXX_FLAGS})
+    endif(OPENMP_FOUND)    
+endif(UNIX)
