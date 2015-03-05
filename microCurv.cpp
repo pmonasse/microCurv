@@ -159,7 +159,7 @@ static unsigned char* reconstruct(LLTree& tree, int w, int h, Rect R) {
 
 /// Fonction mapping curvature value to intensity
 inline unsigned char fct(float f) {
-    return (unsigned char)(255*(1.0f-log(1000*f+1)/log(1000*1+1)));
+    return (unsigned char)(255*(1.0f-log(1000*f+1)/log(1000*1.0f+1)));
 }
 
 /// Display curvature map as color superimposed on faded image
@@ -234,11 +234,11 @@ int main(int argc, char** argv) {
 
     std::cout << " 2. Smooth level lines by affine shortening. " <<std::flush;
     if(scale>0) {
-        const size_t size=tree.nodes().size();
+        const int size=(int)tree.nodes().size();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for(size_t i=0; i<size; i++)
+        for(int i=0; i<size; i++)
             smooth(tree.nodes()[i].ll->line, scale);
     }
     if(!outLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,outLL))
