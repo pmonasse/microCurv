@@ -82,7 +82,7 @@ static void init_inter(std::vector< std::vector<float> >& inter, size_t size)
 
 /// Add bound of interval on line iy at position x
 static void bound(std::vector< std::vector<float> >& inter, float x, int iy) {
-    if(0<=iy && iy<inter.size())
+    if(0<=iy && iy<(int)inter.size())
         inter[iy].push_back(x);
 }
 

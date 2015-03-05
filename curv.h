@@ -25,7 +25,7 @@
 #define CURVE_H
 
 #include <vector>
-class LevelLine;
+struct LevelLine;
 
 void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
           float* out, int w, int h);

@@ -39,15 +39,8 @@
  * OS DETECTION
  */
 
-#if (! defined(__STDC__))
-/*
- * The compiler is not C89 compatible, we can't expect any reliable
- * behaviour, let's give up early.
- */
-#error The compiler needs to implement at least the C89 standard.
-
-#elif (defined(_WIN32) || defined(__WIN32__) \
-     || defined(__TOS_WIN__) || defined(__WINDOWS__))
+#if (defined(_WIN32) || defined(__WIN32__) \
+   | defined(__TOS_WIN__) || defined(__WINDOWS__))
 /* from http://predef.sourceforge.net/preos.html#sec25 */
 
 #define XMTIME_WINDOWS
