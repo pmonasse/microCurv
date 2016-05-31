@@ -112,16 +112,29 @@ static bool output_svg(LLTree& tree, int qstep, int w, int h, Rect R,
 }
 
 /// Write in PNG file the level lines of \a tree at level multiple of \a qstep.
-static bool output_png(LLTree& tree, int qstep, int w, int h, Rect R,
+/// \a z is a zoom factor.
+static bool output_png(LLTree& tree, int qstep, int w, int h, Rect R, float z,
                        const std::string& fileName) {
+    w = static_cast<int>( ceil(z*w) );
+    h = static_cast<int>( ceil(z*h) );
     unsigned char* imgLL = new unsigned char[3*w*h];
     std::fill(imgLL, imgLL+3*w*h, 255); // White image
     // Set R and G channels of pixels on curves at 0, so that they become blue
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
         if((int)it->ll->level%qstep == 0)
-            draw_curve(it->ll->line, 0, imgLL, w, h);
+            if(z==1.0f)
+                draw_curve(it->ll->line, 0, imgLL, w, h);
+            else {
+                std::vector<Point> line;
+                zoom_line(it->ll->line, line, z);
+                draw_curve(line, 0, imgLL, w, h);                
+            }
     std::copy(imgLL, imgLL+w*h, imgLL+w*h); // No need to redraw in G, copy R
 
+    R.x = static_cast<int>( floor(z*R.x) );
+    R.y = static_cast<int>( floor(z*R.y) );
+    R.w = static_cast<int>( floor(z*R.w) );
+    R.h = static_cast<int>( floor(z*R.h) );
     unsigned char* ll = crop(imgLL,w,h,R,3);
     bool ok = (io_png_write_u8(fileName.c_str(),ll,R.w,R.h,3)==0);
     delete [] ll;
@@ -134,25 +147,39 @@ static bool output_png(LLTree& tree, int qstep, int w, int h, Rect R,
 /// The dimensions of the image are \a w and \a h, but only the crop region \a R
 /// is used to output to file \a fileName.
 static bool output_curves(LLTree& tree, int qstep, int w, int h, Rect R,
+                          float zoom,
                           const std::string& fileName) {
-
     size_t end = fileName.rfind(".svg");
     bool ok = (end!=std::string::npos && fileName.size()==end+4)?
         output_svg(tree, qstep, w, h, R, fileName):
-        output_png(tree, qstep, w, h, R, fileName);
+        output_png(tree, qstep, w, h, R, zoom, fileName);
     if(! ok)
         std::cerr << "Error writing image file " << fileName << std::endl;
     return ok;
 }
 
 /// Reconstruct image from level sets stored in \a tree.
-static unsigned char* reconstruct(LLTree& tree, int w, int h, Rect R) {
+static unsigned char* reconstruct(LLTree& tree, int& w, int& h, Rect& R,
+                                  float zoom) {
+    w = static_cast<int>( ceil(zoom*w) );
+    h = static_cast<int>( ceil(zoom*h) );
     unsigned char* outImage = new unsigned char[w*h];
     std::fill_n(outImage, w*h, 0);
     std::vector< std::vector<float> > inter;
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-        fill_curve(it->ll->line,(unsigned char)it->ll->level,
-                   outImage,w,h, &inter);
+        if(zoom==1.0f)
+            fill_curve(it->ll->line,(unsigned char)it->ll->level,
+                       outImage,w,h, &inter);
+        else {
+            std::vector<Point> line;
+            zoom_line(it->ll->line, line, zoom);
+            fill_curve(line,(unsigned char)it->ll->level,
+                       outImage,w,h, &inter);
+        }
+    R.x = static_cast<int>( floor(zoom*R.x) );
+    R.y = static_cast<int>( floor(zoom*R.y) );
+    R.w = static_cast<int>( floor(zoom*R.w) );
+    R.h = static_cast<int>( floor(zoom*R.h) );
     unsigned char* out = crop(outImage,w,h, R);
     delete [] outImage;
     return out;
@@ -189,17 +216,19 @@ bool colorCurv(const unsigned char* in, const float* map, int w, int h,
 int main(int argc, char** argv) {
     int qstep=8;
     float scale=2.0f;
+    float zoom=1.0f;
     std::string inLL, outLL, sOutImage;
     CmdLine cmd;
     cmd.add( make_option('q', qstep) );
     cmd.add( make_option('s', scale) );
+    cmd.add( make_option('z', zoom) );
     cmd.add( make_option('I', inLL) );
     cmd.add( make_option('O', outLL) );
     cmd.add( make_option('o', sOutImage) );
     cmd.process(argc, argv);
     if(argc!=3 && argc!=4) {
         std::cerr << "Usage: " << argv[0] << ' '
-                  << "[-q qstep] [-s scale] "
+                  << "[-q qstep] [-s scale] [-z zoom] "
                   << "[-I inLL.<png|svg>] [-O outLL.<png|svg>] "
                   << "[-o outImage.png] "
                   << "in.png outCurv.png [outCurv.tif]" << std::endl;
@@ -209,7 +238,7 @@ int main(int argc, char** argv) {
     size_t w, h;
     unsigned char* inIm = io_png_read_u8_gray(argv[1], &w, &h);
     if(! inIm) {
-        std::cerr << "Unable to open image " << argv[1] << std::endl;
+        std::cerr << "Error reading as PNG image: " << argv[1] << std::endl;
         return 1;
     }
 
@@ -225,7 +254,7 @@ int main(int argc, char** argv) {
     LLTree tree(inImage, ncol, nrow, offset, 1.0f, 5);
     fix_level(tree, offset);
     delete [] inImage;
-    if(!inLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,inLL))
+    if(!inLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,zoom,inLL))
         return 1;
 
     std::vector<LevelLine*> qll;
@@ -243,33 +272,36 @@ int main(int argc, char** argv) {
         for(int i=0; i<size; i++)
             smooth(tree.nodes()[i].ll->line, scale);
     }
-    if(!outLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,outLL))
+    if(!outLL.empty() && !output_curves(tree,qstep,ncol,nrow,R,zoom,outLL))
         return 1;
     timer.time();
 
     std::cout << " 3. Reconstruct LLAS evolution. " << std::flush;
-    unsigned char* llas = reconstruct(tree, ncol, nrow, R);
-    if(! sOutImage.empty() && io_png_write_u8(sOutImage.c_str(),llas,w,h,1)!=0){
+    int zncol=ncol, znrow=nrow;
+    Rect zR=R;
+    unsigned char* llas = reconstruct(tree, zncol, znrow, zR, zoom);
+    if(!sOutImage.empty() && io_png_write_u8(sOutImage.c_str(),
+                                             llas, zR.w, zR.h, 1)!=0){
         std::cerr << "Error writing image file " << sOutImage << std::endl;
         return 1;
     }
     timer.time();
 
     std::cout << " 4. Construct the curvature map. " << std::flush;
-    float* outCurv = new float[nrow*ncol];
-    std::fill(outCurv, outCurv+nrow*ncol, 255.0f);
-    curv(qll, positive, outCurv,ncol,nrow);
-    float* cmap = crop(outCurv,ncol,nrow, R);
+    float* outCurv = new float[znrow*zncol];
+    std::fill(outCurv, outCurv+znrow*zncol, 255.0f);
+    curv(qll, positive, zoom, outCurv,zncol,znrow);
+    float* cmap = crop(outCurv,zncol,znrow, zR);
     delete [] outCurv;
 
-    if(! colorCurv(llas, cmap,w,h, argv[2])) {
+    if(! colorCurv(llas, cmap,zR.w,zR.h, argv[2])) {
         std::cerr << "Error writing image file " << argv[2] << std::endl;
         return 1;
     }
-    for(int i=nrow*ncol-1; i>=0; i--)
+    for(int i=znrow*zncol-1; i>=0; i--)
         if(cmap[i]==255.0f)
             cmap[i] = std::numeric_limits<float>::quiet_NaN();
-    if(argc>3 && io_tiff_write_f32(argv[3], cmap,w,h,1)!=0) {
+    if(argc>3 && io_tiff_write_f32(argv[3], cmap,zR.w,zR.h,1)!=0) {
         std::cerr << "Error writing image file " << argv[3] << std::endl;
         return 1;
     }

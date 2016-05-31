@@ -112,7 +112,7 @@ float median(std::vector<float>& list) {
 /// Only level lines having more than \c MIN_PTS_CURV are considered, and before
 /// taking median, each value is truncated in interval [-1,+1].
 void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
-          float* out, int w, int h) {
+          float zoom, float* out, int w, int h) {
     assert(positive.size() == ll.size());
     // List of curvatures inside each pixel
     std::vector<float>* curvatures = new std::vector<float>[w*h];
@@ -121,7 +121,13 @@ void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
     std::vector<LevelLine*>::const_iterator it=ll.begin();
     for(int i=0; it!=ll.end(); ++it, ++i)
         if((*it)->line.size()>=MIN_PTS_CURV)
-            curv((*it)->line, positive[i]? +1: -1, w, curvatures);
+            if(zoom==1.0f)
+                curv((*it)->line, positive[i]? +1: -1, w, curvatures);
+            else {
+                std::vector<Point> line;
+                zoom_line((*it)->line, line, zoom);
+                curv(line, positive[i]? +1: -1, w, curvatures);
+            }
 
     // Median curvature inside each pixel
     for(int i=0; i<w*h; i++, out++)
