@@ -162,7 +162,8 @@ inline unsigned char fct(float f) {
     return (unsigned char)(255*(1.0f-log(1000*f+1)/log(1000*1.0f+1)));
 }
 
-/// Display curvature map as color superimposed on faded image
+/// Display curvature map as color superimposed on faded image.
+/// Red=negative, green=positive, yellow=zero.
 bool colorCurv(const unsigned char* in, const float* map, int w, int h,
                const char* sFileName) {
     unsigned char *r=new unsigned char[3*w*h], *g=r+w*h, *b=g+w*h;
