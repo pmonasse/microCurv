@@ -22,9 +22,11 @@
 
 #include "levelLine.h"
 #include <cmath>
+#include <limits>
 #include <cassert>
 
-/// North, West, South, East: direction of entry/exit in a dual pixel
+/// South, East, North, West: directions of entry/exit in a dual pixel.
+/// Left turn=+1. Right turn=-1. Opposite=+2.
 typedef signed char Dir;
 static const Dir S=0, E=1, N=2, W=3;
 
@@ -185,7 +187,7 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
                        std::vector<Point>& line) {
     assert(level[0]<l && l<level[3]);
     Point b(p), m(p), s(p); // b=init, m=corner, s=saddle
-    float xy = sqrt(-1.0); // NaN
+    float xy = std::numeric_limits<float>::quiet_NaN();
     bool corner = (ptsPixel>0) && find_corner(m,l,s,xy);
     bool right= (l<level[1]);
     bool left = (level[2]<l);
