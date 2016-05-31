@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <fstream>
 #include <cmath>
+#include <limits>
 
 /// Timer class to measure real time (not CPU time)
 class Timer {
@@ -265,6 +266,9 @@ int main(int argc, char** argv) {
         std::cerr << "Error writing image file " << argv[2] << std::endl;
         return 1;
     }
+    for(int i=nrow*ncol-1; i>=0; i--)
+        if(cmap[i]==255.0f)
+            cmap[i] = std::numeric_limits<float>::quiet_NaN();
     if(argc>3 && io_tiff_write_f32(argv[3], cmap,w,h,1)!=0) {
         std::cerr << "Error writing image file " << argv[3] << std::endl;
         return 1;
