@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
         std::cerr << "Error writing image file " << argv[2] << std::endl;
         return 1;
     }
-    for(int i=znrow*zncol-1; i>=0; i--)
+    for(int i=zR.w*zR.h-1; i>=0; i--)
         if(cmap[i]==255.0f)
             cmap[i] = std::numeric_limits<float>::quiet_NaN();
     if(argc>3 && io_tiff_write_f32(argv[3], cmap,zR.w,zR.h,1)!=0) {
