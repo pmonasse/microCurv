@@ -116,7 +116,7 @@ void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
     assert(positive.size() == ll.size());
     // List of curvatures inside each pixel
     std::vector<float>* curvatures = new std::vector<float>[w*h];
- 
+
     // Compute curvature
     std::vector<LevelLine*>::const_iterator it=ll.begin();
     for(int i=0; it!=ll.end(); ++it, ++i)
@@ -124,8 +124,8 @@ void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
             if(zoom==1.0f)
                 curv((*it)->line, positive[i]? +1: -1, w, curvatures);
             else {
-                std::vector<Point> line;
-                zoom_line((*it)->line, line, zoom);
+                std::vector<Point> line = (*it)->line;
+                zoom_line(line, zoom);
                 curv(line, positive[i]? +1: -1, w, curvatures);
             }
 

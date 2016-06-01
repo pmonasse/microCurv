@@ -125,8 +125,8 @@ static bool output_png(LLTree& tree, int qstep, int w, int h, Rect R, float z,
             if(z==1.0f)
                 draw_curve(it->ll->line, 0, imgLL, w, h);
             else {
-                std::vector<Point> line;
-                zoom_line(it->ll->line, line, z);
+                std::vector<Point> line = it->ll->line;
+                zoom_line(line, z);
                 draw_curve(line, 0, imgLL, w, h);                
             }
     std::copy(imgLL, imgLL+w*h, imgLL+w*h); // No need to redraw in G, copy R
@@ -171,8 +171,8 @@ static unsigned char* reconstruct(LLTree& tree, int& w, int& h, Rect& R,
             fill_curve(it->ll->line,(unsigned char)it->ll->level,
                        outImage,w,h, &inter);
         else {
-            std::vector<Point> line;
-            zoom_line(it->ll->line, line, zoom);
+            std::vector<Point> line = it->ll->line;
+            zoom_line(line, zoom);
             fill_curve(line,(unsigned char)it->ll->level,
                        outImage,w,h, &inter);
         }

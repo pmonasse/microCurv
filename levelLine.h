@@ -48,7 +48,7 @@ inline Point& operator+=(Point& p1, Point p2) {
     return p1;
 }
 
-void zoom_line(const std::vector<Point>& in,std::vector<Point>& out,float zoom);
+void zoom_line(std::vector<Point>& line, float zoom);
 
 /// Level line: a level and a polygonal line
 struct LevelLine {

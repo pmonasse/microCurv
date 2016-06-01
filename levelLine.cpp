@@ -55,12 +55,13 @@ std::ostream& operator<<(std::ostream& str, const LevelLine& l) {
     return str;
 }
 
-/// Apply zoom factor to points of \a in, write in \a out.
-void zoom_line(const std::vector<Point>& in, std::vector<Point>& out,
-               float zoom) {
-    std::vector<Point>::const_iterator it=in.begin(), end=in.end();
-    for(; it!=end; ++it)
-        out.push_back( Point(it->x*zoom,it->y*zoom) );
+/// Apply zoom factor to points of \a line.
+void zoom_line(std::vector<Point>& line, float zoom) {
+    std::vector<Point>::iterator it=line.begin(), end=line.end();
+    for(; it!=end; ++it) {
+        it->x *= zoom;
+        it->y *= zoom;
+    }
 }
 
 /// A dual pixel, square whose vertices are 4 data points
