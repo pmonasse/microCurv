@@ -99,7 +99,7 @@ static bool output_svg(LLTree& tree, int qstep, int w, int h, Rect R,
     file << "viewBox=\"0 0 " << R.w << ' ' << R.h << "\">" << std::endl;
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
         if((int)it->ll->level%qstep == 0) {
-            file << "<polygon stroke=\"blue\" stroke-width=\".5\" ";
+            file << "<polygon stroke=\"blue\" stroke-width=\".1\" ";
             file << "fill=\"white\" points=\"";
             std::vector<Point>::const_iterator it2, end=it->ll->line.end();
             for(it2=it->ll->line.begin(); it2!=end; ++it2) {
