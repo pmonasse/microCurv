@@ -4,7 +4,7 @@
  * @author Adina Ciomaga <adina@math.uchicago.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2011-2014, Adina Ciomaga, Pascal Monasse
+ * Copyright (c) 2011-2016, Adina Ciomaga, Pascal Monasse
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -40,6 +40,9 @@ static float dist(Point p, const Point& q) {
     return sqrt(p.x*p.x+p.y*p.y);
 }
 
+/// Compute 2x2 determinant: det(b-a c-a).
+/// The minus sign of the result comes from the fact that the pixel coordinate
+/// system is left-handed.
 inline float det(const Point& a, const Point& b, const Point& c) {
     return -((b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x));
 }
@@ -51,7 +54,8 @@ inline float det(const Point& a, const Point& b, const Point& c) {
 static int last_point(const std::vector<Point>& curve) {
     assert(! curve.empty());
     Point p0 = curve.front();
-    std::vector<Point>::const_reverse_iterator it=curve.rbegin(), end=curve.rend();
+    std::vector<Point>::const_reverse_iterator it =curve.rbegin(),
+                                               end=curve.rend();
     size_t i = curve.size()-1;
     for(; it!=end; ++it, --i)
         if(*it!=p0)
@@ -61,6 +65,8 @@ static int last_point(const std::vector<Point>& curve) {
 
 /// Record curvatures inside the pixels the \a curve goes through.
 ///
+/// The orientation is said positive (wrt trigonometric orientation) if the
+/// gradient of the image is to the left when following the level line.
 /// \param curve is the polygonal curve
 /// \param sign (+/-1) gives the orientation of the curve
 /// \param curvatures is the array to store in
@@ -133,7 +139,7 @@ void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
     for(int i=0; i<w*h; i++, out++)
         if(! curvatures[i].empty()) {
             float m =  median(curvatures[i]);
-            *out = - SIGN(m)*std::min(std::abs(m),1.0f);
+            *out = SIGN(m)*std::min(std::abs(m),1.0f);
         }
 
     delete [] curvatures;

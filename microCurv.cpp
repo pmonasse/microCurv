@@ -4,7 +4,7 @@
  * @author Adina Ciomaga <adina@math.uchicago.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2011-2014, Adina Ciomaga, Pascal Monasse
+ * Copyright (c) 2011-2016, Adina Ciomaga, Pascal Monasse
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify

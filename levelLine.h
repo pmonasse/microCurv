@@ -3,7 +3,7 @@
  * @brief Extraction of level lines from an image
  * @author Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2011-2014, Pascal Monasse
+ * Copyright (c) 2011-2016, Pascal Monasse
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify

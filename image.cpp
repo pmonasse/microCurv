@@ -3,7 +3,7 @@
  * @brief Image expansion and crop
  * @author Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2011-2014, Pascal Monasse
+ * Copyright (c) 2011-2016, Pascal Monasse
  * All rights reserved.
  * 
  * This program is free software: you can redistribute it and/or modify it
@@ -20,7 +20,7 @@
 /// Extend line horizontally by mirror effect of \a m pixels in the direction
 /// opposite of \a dir. \a in points to the the first pixel to be duplicated.
 ///
-/// If the line is xxxxab, running with \a in pointing over value a, \a m=2 and
+/// If the line is xxxxab, running with \a in pointing over value a, \a m=4 and
 /// \a dir=+1 will result in abbaab.
 static void mirrorH(unsigned char* in, size_t w, int m, int dir) {
     const int dirOut = -dir;

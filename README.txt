@@ -37,10 +37,11 @@ microCurv [options] in.png outCurv.png [outCurv.tif]
 Options:
   -q <int>: quantization level step of level lines (default 8)
   -s <float>: scale of smoothing by affine scale-space (default 2)
+  -z <float>: zoom factor for output bitmap images (default 1)
   -o <fileName.png>: output image after level line smoothing
   -I <fileName>: output file for level lines before smoothing
   -O <fileName>: output file for level lines after smoothing
-The extension of <fileName> in -I and -O options determines the file format: SVG (Scalable Vector Graphics, extension .svg) or PNG (any other extension).
+The extension of <fileName> in -I and -O options determines the file format: SVG (Scalable Vector Graphics, extension .svg) or PNG (any other extension). SVG output keeps the original size of the image. All other output images are bitmaps and scaled by the zoom factor. In particular, notice that the optional TIFF output image records the original image curvatures but in a zoomed bitmap image.
 
 Two additional programs are built:
 - extractLines [-p|--precision prec] [-o|--offset o] [-s|--step s] [-r|--reconstruct out.png] [-l lastScale] im.png lines.txt
