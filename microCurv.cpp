@@ -217,6 +217,7 @@ int main(int argc, char** argv) {
     int qstep=8;
     float scale=2.0f;
     float zoom=1.0f;
+    Rect rectSelect;
     std::string inLL, outLL, sOutImage;
     CmdLine cmd;
     cmd.add( make_option('q', qstep) );
@@ -225,13 +226,15 @@ int main(int argc, char** argv) {
     cmd.add( make_option('I', inLL) );
     cmd.add( make_option('O', outLL) );
     cmd.add( make_option('o', sOutImage) );
+    cmd.add( make_option('r', rectSelect) );
     cmd.process(argc, argv);
     if(argc!=3 && argc!=4) {
         std::cerr << "Usage: " << argv[0] << ' '
-                  << "[-q qstep] [-s scale] [-z zoom] "
+                  << "[-q qstep] [-s scale] [-z zoom] [-r rect] "
                   << "[-I inLL.<png|svg>] [-O outLL.<png|svg>] "
                   << "[-o outImage.png] "
-                  << "in.png outCurv.png [outCurv.tif]" << std::endl;
+                  << "in.png outCurv.png [outCurv.tif]" << std::endl
+                  << "\trect: wxh+x+y" << std::endl;
         return 1;
     }
 
@@ -244,10 +247,22 @@ int main(int argc, char** argv) {
 
     Timer timer;
 
-    unsigned char* inImage = sym_enlarge(inIm,w,h, MARGIN);
+    if(! cmd.used('r')) {
+        rectSelect.x = rectSelect.y = 0;
+        rectSelect.w = (int)w;
+        rectSelect.h = (int)h;        
+    }
+    const Rect R={MARGIN, MARGIN, rectSelect.w, rectSelect.h}; // Image ROI
+    rectSelect.x -= MARGIN;
+    rectSelect.y -= MARGIN;
+    rectSelect.w += 2*MARGIN;
+    rectSelect.h += 2*MARGIN;
+    const int ncol=rectSelect.w, nrow=rectSelect.h; // Dim of image with margins
+
+    unsigned char* inImage = extract(inIm,w,h, rectSelect);
     free(inIm);
-    const Rect R={MARGIN, MARGIN, w, h};
-    const int ncol=w+2*MARGIN, nrow=h+2*MARGIN;
+    fill_border(inImage,ncol,nrow);
+    io_png_write_u8("toto.png", inImage, ncol, nrow, 1);
 
     std::cout << " 1. Extract level lines. " << std::flush;
     const float offset=0.5f;

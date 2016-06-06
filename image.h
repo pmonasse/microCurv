@@ -3,7 +3,7 @@
  * @brief Image expansion and crop
  * @author Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2011-2014, Pascal Monasse
+ * Copyright (c) 2011-2016, Pascal Monasse
  * All rights reserved.
  * 
  * This program is free software: you can redistribute it and/or modify it
@@ -19,15 +19,17 @@
 #define IMAGE_H
 
 #include <algorithm>
+#include <istream>
 #include <cstddef>
 
 /// A rectangle.
 struct Rect {
     int x, y, w, h;
 };
+std::istream& operator>>(std::istream& str, Rect& R);
 
-unsigned char* mirror(unsigned char* inImage, size_t w, size_t h, int m);
-unsigned char* sym_enlarge(unsigned char* in, size_t w, size_t h, int m);
+unsigned char* extract(unsigned char* inImage, size_t w, size_t h, Rect R);
+void fill_border(unsigned char* im, size_t w, size_t h, unsigned char v=0);
 
 /// Crop rectangle \a r from image \a in having \a ch channels.
 ///
