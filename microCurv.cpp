@@ -262,7 +262,6 @@ int main(int argc, char** argv) {
     unsigned char* inImage = extract(inIm,w,h, rectSelect);
     free(inIm);
     fill_border(inImage,ncol,nrow);
-    io_png_write_u8("toto.png", inImage, ncol, nrow, 1);
 
     std::cout << " 1. Extract level lines. " << std::flush;
     const float offset=0.5f;
