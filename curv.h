@@ -27,7 +27,7 @@
 #include <vector>
 struct LevelLine;
 
-void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
+void curv(const std::vector<LevelLine*>& ll,
           float zoom, float* out, int w, int h);
 
 #endif

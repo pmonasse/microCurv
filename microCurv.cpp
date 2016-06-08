@@ -80,14 +80,10 @@ static void fix_level(LLTree& tree, float offset) {
 /// Extract level lines from \a tree at levels multiple of \a qstep.
 ///
 /// Output is in \a qll. In addition, orientations are stored in \a positive.
-static void quantize(LLTree& tree, int qstep,
-                     std::vector<LevelLine*>& qll, std::vector<bool>& positive){
+static void quantize(LLTree& tree, int qstep, std::vector<LevelLine*>& qll) {
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-		if((int)it->ll->level%qstep == 0) {
+		if((int)it->ll->level%qstep == 0)
             qll.push_back(it->ll);
-            bool up = (it->parent==0 || it->parent->ll->level<it->ll->level);
-            positive.push_back(up);
-        }
 }
 
 /// Write in SVG file the level lines of \a tree at level multiple of \a qstep.
@@ -262,6 +258,7 @@ int main(int argc, char** argv) {
     unsigned char* inImage = extract(inIm,w,h, rectSelect);
     free(inIm);
     fill_border(inImage,ncol,nrow);
+    io_png_write_u8("toto.png",inImage, ncol, nrow, 1);
 
     std::cout << " 1. Extract level lines. " << std::flush;
     const float offset=0.5f;
@@ -272,8 +269,7 @@ int main(int argc, char** argv) {
         return 1;
 
     std::vector<LevelLine*> qll;
-    std::vector<bool> positive;
-    quantize(tree, qstep, qll, positive);
+    quantize(tree, qstep, qll);
     std::cout << qll.size() << "/" <<tree.nodes().size() << " level lines. ";
     timer.time();
 
@@ -304,7 +300,7 @@ int main(int argc, char** argv) {
     std::cout << " 4. Construct the curvature map. " << std::flush;
     float* outCurv = new float[znrow*zncol];
     std::fill(outCurv, outCurv+znrow*zncol, 255.0f);
-    curv(qll, positive, zoom, outCurv,zncol,znrow);
+    curv(qll, zoom, outCurv,zncol,znrow);
     float* cmap = crop(outCurv,zncol,znrow, zR);
     delete [] outCurv;
 

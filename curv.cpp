@@ -68,10 +68,9 @@ static int last_point(const std::vector<Point>& curve) {
 /// The orientation is said positive (wrt trigonometric orientation) if the
 /// gradient of the image is to the left when following the level line.
 /// \param curve is the polygonal curve
-/// \param sign (+/-1) gives the orientation of the curve
 /// \param curvatures is the array to store in
 /// \param w the width of the array \a curvatures.
-static void curv(const std::vector<Point>& curve, signed char sign, int w,
+static void curv(const std::vector<Point>& curve, int w,
                  std::vector<float>* curvatures)
 {
     assert(curve.size()>=3); // Need at least 3 points to compute a curvature
@@ -86,7 +85,7 @@ static void curv(const std::vector<Point>& curve, signed char sign, int w,
             r = &curve[0];
         float v = dist(*p,*r);
         float d = u * v * dist(*q,*r); 
-        float K = ((d==0)? 0: 2*sign*det(*p,*q,*r)/d);
+        float K = ((d==0)? 0: 2*det(*p,*q,*r)/d);
         int i = (int)(curve[k].x-0.5f);
         int j = (int)(curve[k].y-0.5f);
         curvatures[j*w+i].push_back(K);
@@ -114,12 +113,10 @@ float median(std::vector<float>& list) {
 /// Compute the curvature inside each pixel.
 ///
 /// This is the median of the curvatures of level lines at points inside the
-/// pixel. The array \a positive gives the orientation of each level line.
-/// Only level lines having more than \c MIN_PTS_CURV are considered, and before
-/// taking median, each value is truncated in interval [-1,+1].
-void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
+/// pixel. Only level lines having more than \c MIN_PTS_CURV are considered,
+/// and after taking median, each value is truncated in interval [-1,+1].
+void curv(const std::vector<LevelLine*>& ll,
           float zoom, float* out, int w, int h) {
-    assert(positive.size() == ll.size());
     // List of curvatures inside each pixel
     std::vector<float>* curvatures = new std::vector<float>[w*h];
 
@@ -128,11 +125,11 @@ void curv(const std::vector<LevelLine*>& ll, const std::vector<bool>& positive,
     for(int i=0; it!=ll.end(); ++it, ++i)
         if((*it)->line.size()>=MIN_PTS_CURV)
             if(zoom==1.0f)
-                curv((*it)->line, positive[i]? +1: -1, w, curvatures);
+                curv((*it)->line, w, curvatures);
             else {
                 std::vector<Point> line = (*it)->line;
                 zoom_line(line, zoom);
-                curv(line, positive[i]? +1: -1, w, curvatures);
+                curv(line, w, curvatures);
             }
 
     // Median curvature inside each pixel
