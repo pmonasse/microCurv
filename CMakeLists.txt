@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
-# zlib is needed by libPNG and also by libTIFF, even though the cmake module for
-# libTIFF does not specify that
+# zlib is needed by libPNG and by libTIFF
 find_package(ZLIB)
 if(NOT ZLIB_FOUND)
   add_subdirectory(third_party/zlib-1.2.8)
@@ -23,7 +22,7 @@ if(NOT TIFF_FOUND)
         add_subdirectory(third_party/jpeg-9b)
     endif(NOT JPEG_FOUND)
     include_directories(${JPEG_INCLUDE_DIR})
-    add_subdirectory(third_party/tiff-4.0.3)
+    add_subdirectory(third_party/tiff-4.0.6)
     include_directories(${TIFF_INCLUDE_DIR})
 endif(NOT TIFF_FOUND)
 
