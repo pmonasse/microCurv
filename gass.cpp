@@ -59,90 +59,73 @@ static void split_convex(const std::vector<DPoint>& in,
                          std::vector<DPoint>& out, std::vector<size_t>& cvx)
 {
     // initialization
-    std::vector<DPoint>::const_iterator p=in.begin(), pmax = in.end();
-    bool is_closed = (in.front()==in.back());
+    std::vector<DPoint>::const_iterator p=in.begin(), first=p, pmax=in.end();
+    bool closed = (in.front()==in.back());
 
     if(in.size()<4) {
-        while(p!=pmax)
-            out.push_back(*p++);
+        out = in;
         cvx.push_back( out.size() );
         return;
     }
 
-    int ni = 0;
-    DPoint p1(*p++),p2(*p++),p3(*p++);
+    int ni = 0; // Number of inflection points
+    DPoint p1(*p++),p2(p1),p3(*p++);
     out.push_back(p1);
-    int d2 = dir(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
 
-    // MAIN LOOP : d1=angle(P1-P2-P3) and d2=angle(P2-P3-P4)
+    // Find first angle at p2
+    int d1=0;
+    while(d1==0 && p!=pmax) {
+        p2 = p3;
+        p3 = *p++;
+        d1 = dir(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+    }
 
-    bool ok = true;
-    std::vector<DPoint>::const_iterator first=in.begin();
-
-    while (ok) {
-        int d1 = d2;
+    while(p!=pmax) {
         DPoint p4=*p++;
-        d2 = dir(p2.x, p2.y, p3.x, p3.y, p4.x, p4.y);
-
-        if(d1*d2>0) { // convex part: store point and increment p
-            out.push_back(p1=p2);
-            p2 = p3;
-            p3 = p4;
-        }
-        else if(d1*d2<0) { // split curve
+        int d2 = dir(p2.x, p2.y, p3.x, p3.y, p4.x, p4.y);
+        if(d2!=0) {
             out.push_back(p2);
-            DPoint m = .5*(p2+p3);
-            out.push_back(m);
-            cvx.push_back( out.size() );
-            if(p==first)
-                ok=false;
-            if(first==in.begin())
-                first=p;
-            if(ok) {
-                if(is_closed && !ni) {
+            if(d1==d2) {
+                if(p == first) { // Rare, but can happen
+                    assert(closed);
+                    out.push_back(out.front());
+                    cvx.push_back(out.size());
+                    break;
+                }
+            } else {
+                d1 = d2; // For next iteration
+                DPoint m = .5*(p2+p3);
+                out.push_back(m);
+                cvx.push_back( out.size() );
+                if(p == first) // End of loop
+                    break;
+                // First inflection point of closed curve? Start over here
+                else if(closed && ni==0) {
                     out.clear();
                     cvx.clear();
                     cvx.push_back(0);
+                    first = p;
                 }
+                // Begin new convex part
                 out.push_back(m);
-                ni++;
-                p1 = p2;
-                p2 = p3;
-                p3 = p4;
+                ++ ni;
             }
-        } else { // undefined sign: remove one point
-            if(d1==0 || d2==0) {
-                if(d1==0)
-                    p2 = p3;
-                p3 = p4;
-                d2 = dir(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
-            } else
-                assert(false); // NaN in curve?
+            p1=p2; p2=p3;
         }
-
-        // test end of loop
-        if(ok && p==pmax) {
-            if (is_closed)
-                p = in.begin()+1;
-            else
-                ok=false;
+        p3=p4; // Move triangle p1-p2-p3 to p2-p3-p4
+        
+        if(p==pmax && closed) // Loop for closed curve
+            p = in.begin()+1;
+        if(ni==0 && p==in.begin()+3) { // Convex closed curve
+            out.push_back( out.front() );
+            cvx.push_back( out.size() );
+            break;
         }
-
-        // stop for convex closed curves
-        if(p==in.begin()+3 && ni==0)
-            ok=false;
     }
-    // END OF MAIN LOOP
 
-    if (!is_closed) {
+    if (! closed) {
         out.push_back(p2);
         out.push_back(p3);
-        cvx.push_back( out.size() );
-    } else if(ni==0) { // convex closed curve */
-        if (out.end() == out.begin()+1)
-            out.push_back( out.front() );
-        else
-            out[0] = out.back();
         cvx.push_back( out.size() );
     }
 }
@@ -212,12 +195,12 @@ static void aceros(DPoint* in, int size,
 
     // test if the curve is closed
     DPoint* pmax = in+size;
-    bool is_closed = (*in==pmax[-1]);
-    if(is_closed)
+    bool closed = (*in==pmax[-1]);
+    if(closed)
         --pmax;
 
     // deal with singular cases (2 or 3 points, closed)
-    if(size<4 && is_closed)
+    if(size<4 && closed)
         return;
 
     // return input if segment or area_sz=0
@@ -232,7 +215,7 @@ static void aceros(DPoint* in, int size,
     tot_area = ABS(tot_area);
 
     // check extinction
-    if (is_closed) {
+    if (closed) {
         if(area_sz>=tot_area/2.1) // theoretically: 2.0
             return;
     } else if(area_sz>=tot_area) {
@@ -241,7 +224,7 @@ static void aceros(DPoint* in, int size,
         return;
     }
 
-    if(!is_closed)
+    if(!closed)
         out.push_back(*in);
     DPoint *p=in, *p0=p, *q0=in+1, *p1=in+1, *q1=in+2;
     double cur_area=0.0;
@@ -258,7 +241,7 @@ static void aceros(DPoint* in, int size,
             if(cur_area+inc_area-area3(p0,p1,q1)>area_sz) {
                 cur_area -= area3(p0, p1, q0);
                 p0 = p1++;
-                if(is_closed && p1==pmax)
+                if(closed && p1==pmax)
                     p1 -= size-1;
                 if(p0==p)
                     okp = true;
@@ -266,7 +249,7 @@ static void aceros(DPoint* in, int size,
             else {
                 cur_area += inc_area;
                 q0 = q1++;
-                if(is_closed && q1==pmax)
+                if(closed && q1==pmax)
                     q1 -= size-1;
                 if(q0==p+1)
                     okq = true;
@@ -277,18 +260,18 @@ static void aceros(DPoint* in, int size,
                 double lambda = double((cur_area-area_sz)/inc_area);
                 out.push_back(.5*(*q0+(1-lambda)**p0+lambda**p1));
             }
-            if(!is_closed && q1!=pmax &&
+            if(!closed && q1!=pmax &&
                cur_area-inc_area+area3(p1, q0, q1)<area_sz) {
                 cur_area += area3(p0, q0, q1);
                 q0 = q1++;
-                if(is_closed && q1==pmax)
+                if(closed && q1==pmax)
                     q1 -= size-1;
                 if(q0==p+1)
                     okq = true;
             } else {
                 cur_area -= inc_area;
                 p0 = p1++;
-                if(is_closed && p1==pmax)
+                if(closed && p1==pmax)
                     p1 -= size-1;
                 if(p0==p)
                     okp = true;
@@ -299,14 +282,14 @@ static void aceros(DPoint* in, int size,
         if(p1==q0)
             cur_area = 0.0;
         DPoint* p2 = p1+1;
-        if(is_closed && p2==pmax)
+        if(closed && p2==pmax)
             p2 -= size-1;
         if(p2==q0)
             cur_area = area3(p0, p1, q0);
-    } while(!(is_closed? (okp&&okq): ((q0+1==pmax&&cur_area<=area_sz))));
+    } while(!(closed? (okp&&okq): ((q0+1==pmax&&cur_area<=area_sz))));
 
     // add last point to output
-    out.push_back(is_closed? out.front(): pmax[-1]);
+    out.push_back(closed? out.front(): pmax[-1]);
 }
 
 /*----------------------- DISCRETE AFFINE EROSION  -----------------------*/

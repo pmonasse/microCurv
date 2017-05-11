@@ -70,3 +70,7 @@ if(UNIX)
         set(CMAKE_EXE_LINKER_FLAGS  ${OpenMP_CXX_FLAGS})
     endif(OPENMP_FOUND)    
 endif(UNIX)
+
+
+# test GASS
+add_executable(test_gass test_gass.cpp gass.h gass.cpp)
