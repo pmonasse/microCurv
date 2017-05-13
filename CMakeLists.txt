@@ -54,7 +54,8 @@ set(SRC3
     io_tiff.c io_tiff.h
     levelLine.cpp levelLine.h
     lltree.cpp lltree.h
-    microCurv.cpp
+    main.cpp
+    microCurv.h microCurv.cpp
     xmtime.h)
 add_executable(microCurv ${SRC3})
 target_link_libraries(microCurv ${PNG_LIBRARIES} ${TIFF_LIBRARIES})
