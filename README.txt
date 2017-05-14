@@ -41,6 +41,7 @@ Options:
   -o <fileName.png>: output image after level line smoothing
   -I <fileName>: output file for level lines before smoothing
   -O <fileName>: output file for level lines after smoothing
+  -r <ROI>: region of interest in input image. Format: wxh+x0+y0
 The extension of <fileName> in -I and -O options determines the file format: SVG (Scalable Vector Graphics, extension .svg) or PNG (any other extension). SVG output keeps the original size of the image. All other output images are bitmaps and scaled by the zoom factor. In particular, notice that the optional TIFF output image records the original image curvatures but in a zoomed bitmap image.
 
 Two additional programs are built:
@@ -73,8 +74,10 @@ levelLine.h
 LICENSE.txt
 lltree.cpp
 lltree.h
+main.cpp
 main_extraction.cpp
 main_gass.cpp
+microCurv.h
 microCurv.cpp
 README.txt
 usage.txt

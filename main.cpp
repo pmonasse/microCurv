@@ -152,22 +152,19 @@ int main(int argc, char** argv) {
     float zoom=1.0f;
     Rect rectSelect;
     std::string inLL, outLL, sOutImage;
-    CmdLine cmd;
-    cmd.add( make_option('q', qstep) );
-    cmd.add( make_option('s', scale) );
-    cmd.add( make_option('z', zoom) );
-    cmd.add( make_option('I', inLL) );
-    cmd.add( make_option('O', outLL) );
-    cmd.add( make_option('o', sOutImage) );
-    cmd.add( make_option('r', rectSelect) );
+    CmdLine cmd; cmd.prefixDoc = "\t";
+    cmd.add( make_option('q',qstep).doc("Quantization step (integer)") );
+    cmd.add( make_option('s',scale).doc("Scale of smoothing (real)") );
+    cmd.add( make_option('z',zoom).doc("Output zoom factor") );
+    cmd.add( make_option('I',inLL).doc("Output init level lines (png|svg)") );
+    cmd.add( make_option('O',outLL).doc("Ouptut smooth level lines (png|svg)"));
+    cmd.add( make_option('o',sOutImage).doc("Output Smoothed image") );
+    cmd.add( make_option('r',rectSelect).doc("Input ROI: wxh+x0+y0"));
     cmd.process(argc, argv);
     if(argc!=3 && argc!=4) {
-        std::cerr << "Usage: " << argv[0] << ' '
-                  << "[-q qstep] [-s scale] [-z zoom] [-r rect] "
-                  << "[-I inLL.<png|svg>] [-O outLL.<png|svg>] "
-                  << "[-o outImage.png] "
-                  << "in.png outCurv.png [outCurv.tif]" << std::endl
-                  << "\trect: wxh+x+y" << std::endl;
+        std::cerr << "Usage: " << argv[0]
+                  << " [options] in.png outCurv.png [outCurv.tif]" << std::endl;
+        std::cerr << "Options:\n" << cmd;
         return 1;
     }
 

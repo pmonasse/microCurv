@@ -3,7 +3,7 @@
  * @brief Command line option parsing
  * @author Pascal Monasse
  * 
- * Copyright (c) 2012-2014 Pascal Monasse
+ * Copyright (c) 2012-2016 Pascal Monasse
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <sstream>
 #include <cassert>
@@ -37,14 +38,26 @@
 /// Base class for option/switch
 class Option {
 public:
-    char c; ///< Option letter (eg 's' for option -s)
+    char c; ///< Option letter (eg 's' for -s), 0 if you want only a long name
     bool used; ///< Does the command line use that option?
-    std::string longName; /// Optional long name (eg "switch" for --switch)
+    std::string longName; ///< Optional long name (eg "switch" for --switch)
+    std::string desc; ///< Description
 
     /// Constructor with short name/long name
     Option(char d, std::string name)
     : c(d), used(false), longName(name) {}
     virtual ~Option() {}
+    const std::string& doc() const { return desc; }
+    virtual void print(std::ostream& str) const {
+        if(c)
+            str << '-' << c << (longName.empty()? "": ", ");
+        else
+            str << "    "; // For alignment
+        if(! longName.empty())
+            str << "--" << longName;
+    }
+    Option& doc(const std::string& description)
+    { desc=description; return *this;}
     virtual bool check(int& argc, char* argv[])=0; ///< Option found at argv[0]?
     virtual Option* clone() const=0; ///< Copy
 };
@@ -73,7 +86,7 @@ public:
     }
     /// Copy
     Option* clone() const {
-        return new OptionSwitch(c, longName);
+        return new OptionSwitch(*this);
     }
 };
 
@@ -117,13 +130,34 @@ public:
         std::stringstream str(param); char unused;
         return !((str >> _field).fail() || !(str>>unused).fail());
     }
+    /// Indicate that an argument is required
+    void print(std::ostream& str) const {
+        Option::print(str);
+        str << (longName.empty()? ' ': '=') << "ARG";
+    }
     /// Copy
     Option* clone() const {
-        return new OptionField<T>(c, _field, longName);
+        return new OptionField<T>(*this);
     }
 private:
     T& _field; ///< Reference to variable where to store the value
 };
+
+/// Template specialization to declare a switch like an option, storing result
+/// in the variable.
+template <>
+inline bool OptionField<bool>::check(int& argc, char* argv[]) {
+    bool res = OptionSwitch(c,longName).check(argc, argv);
+    if(res)
+        _field = true;
+    return res;
+}
+
+/// Specialisation for a switch, no argument to print.
+template<>
+void OptionField<bool>::print(std::ostream& str) const {
+    Option::print(str);    
+}
 
 /// Template specialization to be able to take parameter including space.
 /// Generic method would do >>_field (stops at space) and signal unused chars.
@@ -148,6 +182,10 @@ OptionField<T> make_option(char c, T& field, std::string name="") {
 class CmdLine {
     std::vector<Option*> opts;
 public:
+    std::string prefixDoc; ///< For example, a tabulation for each line of doc
+    int alignDoc; ///< Column where option description starts
+    /// Constructor
+    CmdLine(): alignDoc(0) {}
     /// Destructor
     ~CmdLine() {
         std::vector<Option*>::iterator it=opts.begin();
@@ -190,6 +228,22 @@ public:
             }
         }
     }
+    /// Output options.
+    void print(std::ostream& str) const {
+        std::vector<Option*>::const_iterator it=opts.begin();
+        for(; it != opts.end(); ++it) {
+            std::stringstream ss;
+            ss << prefixDoc;
+            (*it)->print(ss);
+            ss << ' ';
+            std::string d = ss.str();
+            str << d;
+            if((int)d.size() < alignDoc)
+                std::fill_n(std::ostream_iterator<char>(str),
+                            alignDoc-d.size(), ' ');
+            str << (*it)->desc << std::endl;
+        }
+    }
     /// Was the option used in last parsing?
     bool used(char c) const {
         std::vector<Option*>::const_iterator it=opts.begin();
@@ -200,5 +254,11 @@ public:
         return false;
     }
 };
+
+/// Output possible options.
+std::ostream& operator<<(std::ostream& str, const CmdLine& cmd) {
+    cmd.print(str);
+    return str;
+}
 
 #endif
