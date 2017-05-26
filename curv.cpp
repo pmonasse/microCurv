@@ -123,7 +123,7 @@ void curv(const std::vector<LevelLine*>& ll,
     // Compute curvature
     std::vector<LevelLine*>::const_iterator it=ll.begin();
     for(int i=0; it!=ll.end(); ++it, ++i)
-        if((*it)->line.size()>=MIN_PTS_CURV)
+        if((*it)->line.size()>=MIN_PTS_CURV) {
             if(zoom==1.0f)
                 curv((*it)->line, w, curvatures);
             else {
@@ -131,6 +131,7 @@ void curv(const std::vector<LevelLine*>& ll,
                 zoom_line(line, zoom);
                 curv(line, w, curvatures);
             }
+        }
 
     // Median curvature inside each pixel
     for(int i=0; i<w*h; i++, out++)

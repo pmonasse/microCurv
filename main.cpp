@@ -80,7 +80,7 @@ static bool output_png(LLTree& tree, int qstep, int w, int h, Rect R, float z,
     std::fill(imgLL, imgLL+3*w*h, 255); // White image
     // Set R and G channels of pixels on curves at 0, so that they become blue
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
-        if((int)it->ll->level%qstep == 0)
+        if((int)it->ll->level%qstep == 0) {
             if(z==1.0f)
                 draw_curve(it->ll->line, 0, imgLL, w, h);
             else {
@@ -88,6 +88,7 @@ static bool output_png(LLTree& tree, int qstep, int w, int h, Rect R, float z,
                 zoom_line(line, z);
                 draw_curve(line, 0, imgLL, w, h);                
             }
+        }
     std::copy(imgLL, imgLL+w*h, imgLL+w*h); // No need to redraw in G, copy R
 
     R.x = static_cast<int>( floor(z*R.x) );

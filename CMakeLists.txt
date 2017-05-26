@@ -26,24 +26,7 @@ if(NOT TIFF_FOUND)
     include_directories(${TIFF_INCLUDE_DIR})
 endif(NOT TIFF_FOUND)
 
-set(SRC1
-    cmdLine.h
-    fill_curve.cpp fill_curve.h
-    gass.cpp gass.h
-    levelLine.cpp levelLine.h
-    lltree.cpp lltree.h
-    io_png.c io_png.h
-    main_extraction.cpp)
-add_executable(extractLines ${SRC1})
-target_link_libraries(extractLines ${PNG_LIBRARIES})
-
-set(SRC2
-   gass.cpp gass.h
-   levelLine.cpp levelLine.h
-   main_gass.cpp)
-add_executable(smoothLines ${SRC2})
-
-set(SRC3
+set(SRC
     cmdLine.h
     curv.cpp curv.h
     draw_curve.cpp draw_curve.h
@@ -57,21 +40,19 @@ set(SRC3
     main.cpp
     microCurv.h microCurv.cpp
     xmtime.h)
-add_executable(microCurv ${SRC3})
+add_executable(microCurv ${SRC})
 target_link_libraries(microCurv ${PNG_LIBRARIES} ${TIFF_LIBRARIES})
 
 find_package(OpenMP)
 if(OPENMP_FOUND)
-    set_target_properties(microCurv PROPERTIES
-                          COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
+    set_target_properties(microCurv PROPERTIES COMPILE_FLAGS
+                          ${OpenMP_CXX_FLAGS})
+    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+        set(CMAKE_EXE_LINKER_FLAGS ${OpenMP_CXX_FLAGS})
+    endif(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
 endif(OPENMP_FOUND)
 
 if(UNIX)
-    if(OPENMP_FOUND)
-        set(CMAKE_EXE_LINKER_FLAGS  ${OpenMP_CXX_FLAGS})
-    endif(OPENMP_FOUND)    
+    set_target_properties(microCurv PROPERTIES COMPILE_FLAGS
+                          "-Wall -Wextra -Werror ${OpenMP_CXX_FLAGS}")
 endif(UNIX)
-
-
-# test GASS
-add_executable(test_gass test_gass.cpp gass.h gass.cpp)

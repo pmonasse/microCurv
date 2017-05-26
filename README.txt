@@ -5,10 +5,10 @@ by Pascal Monasse <monasse@imagine.enpc.fr>,
 
 This software computes the mean curvature map of an image. It is linked to an IPOL workshop [1]. This is based on level line tree extraction of the bilinear interpolation of a digital image and affine invariant smoothing. These functionalities were inspired from the equivalent MegaWave2 [2] functions 'flst_bilinear' and 'gass', though the tree extraction is based on a much simpler algorithm than 'flst_bilinear'.
 
-[1] IPOL workshop, http://dev.ipol.im/~monasse/ipol_demo/cmmm_image_curvature_microscope/
+[1] IPOL workshop, http://ipolcore.ipol.im/demo/clientApp/demo.html?id=77777000004
 [2] MegaWave2, http://megawave.cmla.ens-cachan.fr/
 
-Version 0.1 released on 2014/12/23
+Version 0.2 released on 2017/05/26
 
 Future releases and updates:
 https://github.com/pmonasse/microCurv.git
@@ -44,19 +44,12 @@ Options:
   -r <ROI>: region of interest in input image. Format: wxh+x0+y0
 The extension of <fileName> in -I and -O options determines the file format: SVG (Scalable Vector Graphics, extension .svg) or PNG (any other extension). SVG output keeps the original size of the image. All other output images are bitmaps and scaled by the zoom factor. In particular, notice that the optional TIFF output image records the original image curvatures but in a zoomed bitmap image.
 
-Two additional programs are built:
-- extractLines [-p|--precision prec] [-o|--offset o] [-s|--step s] [-r|--reconstruct out.png] [-l lastScale] im.png lines.txt
-- smoothLines  [-l lastScale] flistIn flistOut
-The txt output file of extractLines can be used by MegaWave2 [2]:
-$ flreadasc 2 out.flists < lines.txt && fkview out.flists
-The input and output files of smoothLines use the same text format.
-
-Files
+Files (Only those with * are reviewed)
 -----
 CMakeLists.txt
 cmdLine.h
-curv.cpp
-curv.h
+curv.cpp (*)
+curv.h (*)
 draw_curve.cpp
 draw_curve.h
 fill_curve.cpp
@@ -74,13 +67,10 @@ levelLine.h
 LICENSE.txt
 lltree.cpp
 lltree.h
-main.cpp
-main_extraction.cpp
-main_gass.cpp
-microCurv.h
-microCurv.cpp
+main.cpp (*)
+microCurv.h (*)
+microCurv.cpp (*)
 README.txt
-usage.txt
 xmtime.h
 data/flower.png
 data/flowerOut.png
@@ -88,4 +78,3 @@ data/flowerOut.png
 Limitations
 -----------
 The program extracts bilinear level lines at half-integer values (0.5, 1.5, etc). This can be modified (constant 'offset'), but it is important that the quantization avoids initial image levels (since iso-level sets can be quite complex at these levels).
-It is mandatory that all level lines are closed. For this, put a constant level along the image boundary. The programs put a 0 gray level. Calling the function 'extract' (which LLTree constructor does) without satisfying this requirement exposes to a crash.

@@ -105,11 +105,11 @@ static void mirrorV(unsigned char* in, size_t w, size_t h, int m, int dir) {
 unsigned char* extract(unsigned char* inImage, size_t w, size_t h, Rect R) {
     unsigned char* outImage = new unsigned char[R.w*R.h];
     std::fill(outImage, outImage+(R.w*R.h), 0);
-    Rect R0 = {0,0,w,h};
+    Rect R0 = {0,0,(int)w,(int)h};
     Rect R1 = R*R0;
 
     // Copy original image in center
-    for(size_t i=R1.y; i<R1.y+R1.h; i++)
+    for(int i=R1.y; i<R1.y+R1.h; i++)
         std::copy(inImage+i*w+R1.x, inImage+i*w+R1.x+R1.w,
                   outImage+(i-R.y)*R.w+R1.x-R.x);
 
