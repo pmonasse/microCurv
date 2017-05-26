@@ -25,7 +25,7 @@
 #define MICROCURV_H
 
 #include "lltree.h"
-class Rect;
+struct Rect;
 
 LLTree* extract_tree(const unsigned char* im, int w, int h);
 void quantize(LLTree& tree, int qstep, std::vector<LevelLine*>& qll);

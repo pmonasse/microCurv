@@ -28,7 +28,7 @@
 /// South, East, North, West: directions of entry/exit in a dual pixel.
 /// Left turn=+1. Right turn=-1. Opposite=+2.
 typedef signed char Dir;
-static const Dir S=0, E=1, N=2, W=3;
+static const Dir S=0, /*E=1,*/ N=2 /*, W=3*/;
 
 /// Vectors associated to the 4 directions
 static const Point delta[] = {Point(0,+1), //S

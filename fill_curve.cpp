@@ -174,7 +174,7 @@ void fill_line(T value, T* im, T* end, std::vector<float>& inter) {
 template <typename T>
 void fill_inter(T value, T* im, size_t w, size_t h,
                 std::vector< std::vector<float> >& inter) {
-    for(int i=0; i<h; i++)
+    for(size_t i=0; i<h; i++)
         if(! inter[i].empty())
             fill_line(value, im+i*w, im+(i+1)*w, inter[i]);
 }
