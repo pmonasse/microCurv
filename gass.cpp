@@ -4,7 +4,7 @@
  * @author Lionel Moisan <Lionel.Moisan@parisdescartes.fr>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2002, 2012-2014, Lionel Moisan, Pascal Monasse
+ * Copyright (c) 2002, 2012-2017, Lionel Moisan, Pascal Monasse
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,26 +29,26 @@
 #define ABS(x)       ( (x)>0?(x):-(x) )
 #define SGN(x)       (((x)==0.0)? 0: (((x)>0.0)?1: -1))
 
-inline double det3(const DPoint* a, const DPoint* b, const DPoint* c) {
-    return ((b->x-a->x)*(c->y-a->y) - (b->y-a->y)*(c->x-a->x));
+inline double det3(const DPoint& a, const DPoint& b, const DPoint& c) {
+    return ((b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x));
 }
 
-inline double area3(const DPoint* a, const DPoint* b, const DPoint* c) {
-    double tmp=det3(a,b,c)/2.0;
+inline double area3(const DPoint& a, const DPoint& b, const DPoint& c) {
+    double tmp = det3(a,b,c)/2.0;
     return ABS(tmp);
 }
 
-#define EPSILON  1e-15          /* relative precision for a double */
+#define EPSILON  1e-15          // relative precision for a double
 
-/*** return +1, 0 or -1, the sign of det(b-a,c-b) modulo double precision ***/
-static int dir(double ax, double ay, double bx, double by, double cx, double cy)
+/// return +1, 0 or -1, the sign of det(b-a,c-b) modulo double precision
+static int dir(const DPoint& a, const DPoint& b, const DPoint& c)
 {
-    double det = (bx - ax) * (cy - by) - (by - ay) * (cx - bx);
-    double prec = EPSILON * (ABS(bx - ax) * (ABS(cy) + ABS(by)) +
-                             ABS(cy - by) * (ABS(bx) + ABS(ax)) +
-                             ABS(by - ay) * (ABS(cx) + ABS(bx)) +
-                             ABS(cx - bx) * (ABS(by) + ABS(ay)));
-    if (ABS(det) <= prec)
+    double det = det3(a,b,c);
+    double prec = EPSILON * (ABS(b.x - a.x) * (ABS(c.y) + ABS(b.y)) +
+                             ABS(c.y - b.y) * (ABS(b.x) + ABS(a.x)) +
+                             ABS(b.y - a.y) * (ABS(c.x) + ABS(b.x)) +
+                             ABS(c.x - b.x) * (ABS(b.y) + ABS(a.y)));
+    if(ABS(det) <= prec)
         det = 0.0;
     return SGN(det);
 }
@@ -58,8 +58,9 @@ static int dir(double ax, double ay, double bx, double by, double cx, double cy)
 static void split_convex(const std::vector<DPoint>& in,
                          std::vector<DPoint>& out, std::vector<size_t>& cvx)
 {
+    typedef std::vector<DPoint>::const_iterator DPointPtr;
     // initialization
-    std::vector<DPoint>::const_iterator p=in.begin(), first=p, pmax=in.end();
+    DPointPtr p=in.begin(), first=p, pmax=in.end();
     bool closed = (in.front()==in.back());
 
     if(in.size()<4) {
@@ -69,22 +70,22 @@ static void split_convex(const std::vector<DPoint>& in,
     }
 
     int ni = 0; // Number of inflection points
-    DPoint p1(*p++),p2(p1),p3(*p++);
-    out.push_back(p1);
+    DPointPtr p1(p++),p2(p1),p3(p++);
+    out.push_back(*p1);
 
     // Find first angle at p2
     int d1=0;
     while(d1==0 && p!=pmax) {
         p2 = p3;
-        p3 = *p++;
-        d1 = dir(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+        p3 = p++;
+        d1 = dir(*p1, *p2, *p3);
     }
 
     while(p!=pmax) {
-        DPoint p4=*p++;
-        int d2 = dir(p2.x, p2.y, p3.x, p3.y, p4.x, p4.y);
+        DPointPtr p4=p++;
+        int d2 = dir(*p2, *p3, *p4);
         if(d2!=0) {
-            out.push_back(p2);
+            out.push_back(*p2);
             if(d1==d2) {
                 if(p == first) { // Rare, but can happen
                     assert(closed);
@@ -94,7 +95,7 @@ static void split_convex(const std::vector<DPoint>& in,
                 }
             } else {
                 d1 = d2; // For next iteration
-                DPoint m = .5*(p2+p3);
+                DPoint m = .5 * (*p2 + *p3);
                 out.push_back(m);
                 cvx.push_back( out.size() );
                 if(p == first) // End of loop
@@ -124,8 +125,8 @@ static void split_convex(const std::vector<DPoint>& in,
     }
 
     if (! closed) {
-        out.push_back(p2);
-        out.push_back(p3);
+        out.push_back(*p2);
+        out.push_back(*p3);
         cvx.push_back( out.size() );
     }
 }
@@ -179,10 +180,10 @@ static void sample(DPoint *in, int size, std::vector<DPoint>& out, double eps2)
 }
 
 /// signed area of a polygonal sector p-q1-q2-p
-static double area_pol(DPoint* p, DPoint* q1, DPoint* q2) {
+static double area_pol(DPoint& p, DPoint* q1, DPoint* q2) {
     double area = 0.;
     for(DPoint* q=q1; q!=q2; ++q)
-        area += det3(q, q+1, p);
+        area += det3(q[0], q[1], p);
     return (area/2.0);
 }
 
@@ -211,7 +212,7 @@ static void aceros(DPoint* in, int size,
     }
 
     // compute total area
-    double tot_area = area_pol(in, in+1, pmax-1);
+    double tot_area = area_pol(*in, in+1, pmax-1);
     tot_area = ABS(tot_area);
 
     // check extinction
@@ -232,14 +233,14 @@ static void aceros(DPoint* in, int size,
 
     do { // MAIN LOOP: compute the middle points of significative chords
         if(cur_area<=area_sz) {
-            double inc_area = area3(q0, q1, p0);
+            double inc_area = area3(*q0, *q1, *p0);
 
             if(cur_area+inc_area>=area_sz) { // compute middle point
                 double lambda = double((area_sz-cur_area)/inc_area);
                 out.push_back(.5*(*p0+(1-lambda)**q0+lambda**q1));
             }
-            if(cur_area+inc_area-area3(p0,p1,q1)>area_sz) {
-                cur_area -= area3(p0, p1, q0);
+            if(cur_area+inc_area-area3(*p0,*p1,*q1)>area_sz) {
+                cur_area -= area3(*p0, *p1, *q0);
                 p0 = p1++;
                 if(closed && p1==pmax)
                     p1 -= size-1;
@@ -255,14 +256,14 @@ static void aceros(DPoint* in, int size,
                     okq = true;
             }
         } else {
-            double inc_area = area3(p0, p1, q0);
+            double inc_area = area3(*p0, *p1, *q0);
             if(cur_area-inc_area<=area_sz) { // compute middle point
                 double lambda = double((cur_area-area_sz)/inc_area);
                 out.push_back(.5*(*q0+(1-lambda)**p0+lambda**p1));
             }
             if(!closed && q1!=pmax &&
-               cur_area-inc_area+area3(p1, q0, q1)<area_sz) {
-                cur_area += area3(p0, q0, q1);
+               cur_area-inc_area+area3(*p1, *q0, *q1)<area_sz) {
+                cur_area += area3(*p0, *q0, *q1);
                 q0 = q1++;
                 if(closed && q1==pmax)
                     q1 -= size-1;
@@ -285,7 +286,7 @@ static void aceros(DPoint* in, int size,
         if(closed && p2==pmax)
             p2 -= size-1;
         if(p2==q0)
-            cur_area = area3(p0, p1, q0);
+            cur_area = area3(*p0, *p1, *q0);
     } while(!(closed? (okp&&okq): ((q0+1==pmax&&cur_area<=area_sz))));
 
     // add last point to output
@@ -319,7 +320,7 @@ static void dafferos(std::vector<DPoint>& l, double& area_sz, double eps2,
         pos2.push_back(pts2.size());
         DPoint* first = &pts2[front];
         DPoint* last  = &pts2.back();
-        double a = (*first==*last)? narea: fabs(area_pol(first,first,last));
+        double a = (*first==*last)? narea: fabs(area_pol(*first,first,last));
         if(min_area<=a && a<narea)
             narea = a;
     }
