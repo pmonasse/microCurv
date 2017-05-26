@@ -1,5 +1,5 @@
-#ifndef _IO_TIFF_H
-#define _IO_ITFF_H
+#ifndef IO_TIFF_H
+#define IO_TIFF_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,4 +16,4 @@ int io_tiff_write_f32(const char *fname, const float *data, size_t nx, size_t ny
 }
 #endif
 
-#endif /* !_IO_TIFF_H */
+#endif /* !IO_TIFF_H */
