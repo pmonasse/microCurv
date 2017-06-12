@@ -8,7 +8,7 @@ This software computes the mean curvature map of an image. It is linked to an IP
 [1] IPOL workshop, http://ipolcore.ipol.im/demo/clientApp/demo.html?id=77777000004
 [2] MegaWave2, http://megawave.cmla.ens-cachan.fr/
 
-Version 0.2 released on 2017/05/26
+Version 0.3 released on 2017/06/22
 
 Future releases and updates:
 https://github.com/pmonasse/microCurv.git

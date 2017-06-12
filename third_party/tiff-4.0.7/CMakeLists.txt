@@ -503,7 +503,7 @@ set(MDI_SUPPORT ${mdi})
 
 # ZLIB
 option(zlib "use zlib (required for Deflate compression)" ON)
-if (zlib)
+if (zlib AND NOT ZLIB_FOUND)
   find_package(ZLIB)
 endif()
 set(ZLIB_SUPPORT 0)
@@ -524,8 +524,8 @@ endif()
 
 # JPEG
 option(jpeg "use libjpeg (required for JPEG compression)" ON)
-if (jpeg)
-#  find_package(JPEG)
+if (jpeg AND NOT JPEG_FOUND)
+  find_package(JPEG)
 endif()
 set(JPEG_SUPPORT FALSE)
 if(JPEG_FOUND)
