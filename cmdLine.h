@@ -60,6 +60,8 @@ public:
     { desc=description; return *this;}
     virtual bool check(int& argc, char* argv[])=0; ///< Option found at argv[0]?
     virtual Option* clone() const=0; ///< Copy
+    /// Print value of option
+    virtual std::string printValue() const { return std::string(); }
 };
 
 /// Option on/off is called a switch
@@ -135,6 +137,11 @@ public:
         Option::print(str);
         str << (longName.empty()? ' ': '=') << "ARG";
     }
+    std::string printValue() const {
+        std::stringstream s;
+        s << _field;
+        return s.str();
+    }
     /// Copy
     Option* clone() const {
         return new OptionField<T>(*this);
@@ -157,6 +164,12 @@ inline bool OptionField<bool>::check(int& argc, char* argv[]) {
 template<>
 void OptionField<bool>::print(std::ostream& str) const {
     Option::print(str);    
+}
+
+/// Specialisation for a switch, no argument to print.
+template<>
+std::string OptionField<bool>::printValue() const {
+    return Option::printValue();
 }
 
 /// Template specialization to be able to take parameter including space.
@@ -184,8 +197,9 @@ class CmdLine {
 public:
     std::string prefixDoc; ///< For example, a tabulation for each line of doc
     int alignDoc; ///< Column where option description starts
+    bool showDefaults; ///< Show default values of options
     /// Constructor
-    CmdLine(): alignDoc(0) {}
+    CmdLine(): alignDoc(0), showDefaults(true) {}
     /// Destructor
     ~CmdLine() {
         std::vector<Option*>::iterator it=opts.begin();
@@ -241,7 +255,10 @@ public:
             if((int)d.size() < alignDoc)
                 std::fill_n(std::ostream_iterator<char>(str),
                             alignDoc-d.size(), ' ');
-            str << (*it)->desc << std::endl;
+            str << (*it)->desc;
+            if(showDefaults && !(*it)->printValue().empty())
+                str << " (" << (*it)->printValue() << ')';
+            str << std::endl;
         }
     }
     /// Was the option used in last parsing?
