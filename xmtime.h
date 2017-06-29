@@ -45,6 +45,11 @@
 
 #define XMTIME_WINDOWS
 
+#elif defined(__MACH__)
+/* MacOS */
+
+#define XMTIME_POSIX
+
 #elif (defined(__unix__) || defined(__unix))
 /* from http://predef.sourceforge.net/preos.html#sec47 */
 
