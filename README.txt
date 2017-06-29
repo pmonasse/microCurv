@@ -8,19 +8,25 @@ This software computes the mean curvature map of an image. It is linked to an IP
 [1] IPOL workshop, http://ipolcore.ipol.im/demo/clientApp/demo.html?id=77777000004
 [2] MegaWave2, http://megawave.cmla.ens-cachan.fr/
 
-Version 0.3 released on 2017/06/22
+Version 1.0 released on 2017/06/29
 
 Future releases and updates:
 https://github.com/pmonasse/microCurv.git
 
 Build
 -----
-Prerequisites: CMake version 2.6 or later, libTIFF, libPNG
+Prerequisites: CMake version 2.6 or later
 
-- Unix, MacOS, Windows with MinGW:
+- Unix, MacOS:
 $ cd /path_to_this_file/
 $ mkdir Build && cd Build && cmake -DCMAKE_BUILD_TYPE:bool=Release ..
 $ make
+- Windows with MinGW:
+$ cd /path_to_this_file/
+$ mkdir Build 
+$ cd Build
+$ cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE:bool=Release ..
+$ mingw32-make
 
 CMake tries to find libPNG and libTIFF on your system. They need to come with header files, which are provided by "...-dev" packages under Linux Debian or Ubuntu.
 
