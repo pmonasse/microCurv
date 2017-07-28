@@ -3,9 +3,9 @@ by Pascal Monasse <monasse@imagine.enpc.fr>,
    Adina Ciomaga <adina@math.uchicago.edu>
    Lionel Moisan <Lionel.Moisan@parisdescartes.fr>
 
-This software computes the mean curvature map of an image. It is linked to an IPOL workshop [1]. This is based on level line tree extraction of the bilinear interpolation of a digital image and affine invariant smoothing. These functionalities were inspired from the equivalent MegaWave2 [2] functions 'flst_bilinear' and 'gass', though the tree extraction is based on a much simpler algorithm than 'flst_bilinear'.
+This software computes the mean curvature map of an image. It is linked to an IPOL article [1]. This is based on level line tree extraction of the bilinear interpolation of a digital image and affine invariant smoothing. These functionalities were inspired from the equivalent MegaWave2 [2] functions 'flst_bilinear' and 'gass', though the tree extraction is based on a much simpler algorithm than 'flst_bilinear'.
 
-[1] IPOL workshop, http://ipolcore.ipol.im/demo/clientApp/demo.html?id=77777000004
+[1] IPOL article, https://doi.org/10.5201/ipol.2017.212
 [2] MegaWave2, http://megawave.cmla.ens-cachan.fr/
 
 Version 1.0 released on 2017/06/29
