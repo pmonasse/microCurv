@@ -3,7 +3,7 @@
  * @brief Extraction of level lines from an image
  * @author Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2011-2016, Pascal Monasse
+ * Copyright (c) 2011-2016, 2019 Pascal Monasse
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -64,20 +64,33 @@ void zoom_line(std::vector<Point>& line, float zoom) {
     }
 }
 
-/// A dual pixel, square whose vertices are 4 data points
-struct DualPixel {
+/// A mobile dual pixel, square whose vertices are 4 data points.
+/// This is the main structure to extract a level line, moving from dual pixel
+/// to an adjacent one until coming back at starting point. The entry direction
+/// of the level line is recorded: south means it enters from the top horizontal
+/// edgel, east from the right vertical, north from the bottom horizontal and
+/// west from the right.
+/// The object stores the coordinates of its 4 vertices (data points of the
+/// image) and their respective level in arrays. They are stored in clockwise
+/// order starting from the right hand side of the entry point. For example, if
+/// the direction of entry is south, meaning the line comes from the upper
+/// horizontal edgel, the first vertex is top-left, followed by bottom-left,
+/// bottom-right, and top-right.
+class DualPixel {
+public:
     DualPixel(Point& p, float l, const unsigned char* im, size_t w);
     void follow(Point& p, float l, int ptsPixel, std::vector<Point>& line);
     bool mark_visit(std::vector<bool>& visit,
                     std::vector< std::vector<Inter> >* inter, size_t idx,
                     const Point& p) const;
-    unsigned char level[4];
-    Point vertex[4];
 private:
-    const unsigned char* _im;
-    const size_t _w;
-    Dir _d;
-    void update(bool left, bool right);
+    const unsigned char* _im; ///< The image stored as 1D array.
+    const size_t _w; ///< Number of columns of image.
+    unsigned char _level[4]; /// The levels at the 4 data points.
+    Point _vertex[4]; /// The positions of the 4 data points.
+    Dir _d; /// Direction of entry into dual pixel.
+
+    void move(bool left, bool right);
     float numSaddle() const; ///< Numerator of saddle value
     float denomSaddle() const; ///< Denominator of saddle value
     bool find_corner(Point& p, float l, Point& s, float& delta) const;
@@ -90,27 +103,35 @@ inline float linear(float v0, float v, float v1) {
     return (v-v0)/(v1-v0);
 }
 
-/// Constructor
+/// Constructor.
+/// \param[in,out] p the edgel endpoint at the right of incoming direction.
+/// \param l the level of the level line.
+/// \param im the values of pixels in a 1D array.
+/// \param w the number of pixel columns in \a im.
+/// The incoming direction is always supposed to be south, so the level line is
+/// crossing the edgel from \a p to \a p+(1,0). It means the starting point of
+/// the level line is at \a p+(x,0), with 0<x<1. As output, \a p is moved to
+/// this position.
 DualPixel::DualPixel(Point& p, float l, const unsigned char* im, size_t w)
 : _im(im), _w(w), _d(S) {
     Dir d=_d;
     for(int i=0; i<4; i++) {
-        level[i] = im[(size_t)p.y*w+(size_t)p.x];
-        vertex[i] = p;
+        _level[i] = im[(size_t)p.y*w+(size_t)p.x];
+        _vertex[i] = p;
         p += delta[d];
-        if(++d==4) d=0;
+        if(++d==4) d=0; // Not useful if S=0, but better be safe
     }
-    p += linear(level[0],l,level[3])*delta[_d+1]; // Safe: delta[4]==delta[0]
+    p += linear(_level[0],l,_level[3])*delta[_d+1]; // Safe: delta[4]==delta[0]
 }
 
 /// The saddle value can be expressed as a fraction. This is its numerator.
 inline float DualPixel::numSaddle() const {
-    return (level[0]*(float)level[2]-level[1]*(float)level[3]);
+    return (_level[0]*(float)_level[2]-_level[1]*(float)_level[3]);
 }
 
 /// The saddle value can be expressed as a fraction. This is its denominator.
 inline float DualPixel::denomSaddle() const {
-    return ((float)level[0]+level[2]-level[1]-level[3]);
+    return ((float)_level[0]+_level[2]-_level[1]-_level[3]);
 }
 
 inline float sign(float f) {
@@ -126,9 +147,9 @@ bool DualPixel::find_corner(Point& p, float l, Point& s, float& delta) const {
     if(! vert) { D=-D; delta=-delta; }
 #define MOD4(d) ((d)&0x3) // Modulo 4
     int base=MOD4(S-_d+4); // S->0, E->3, N->2, W->1
-    s.x = (level[base]-level[MOD4(base+1)])/D;
-    s.y = (level[base]-level[MOD4(base+3)])/D;
-    s += vertex[base];
+    s.x = (_level[base]-_level[MOD4(base+1)])/D;
+    s.y = (_level[base]-_level[MOD4(base+3)])/D;
+    s += _vertex[base];
 #undef MOD4
     float s1 = vert? sign(p.x-s.x): sign(p.y-s.y);
     float s2 = sign(delta);
@@ -138,11 +159,17 @@ bool DualPixel::find_corner(Point& p, float l, Point& s, float& delta) const {
     p = s;
     p.x += s1*d;
     p.y += s2*d;
-    return (vertex[base].x<p.x && p.x<vertex[base].x+1 &&
-            vertex[base].y<p.y && p.y<vertex[base].y+1);
+    return (_vertex[base].x<p.x && p.x<_vertex[base].x+1 &&
+            _vertex[base].y<p.y && p.y<_vertex[base].y+1);
 }
 
-/// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta
+/// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta.
+/// \param p1 start point.
+/// \param p2 end point.
+/// \param ptsPixel number of points of discretization per pixel.
+/// \param s center of hyperbola.
+/// \param delta parameter of hyperbola (sqrt(2) times semi major axis).
+/// \param[out] line where the sampled points are stored.
 void DualPixel::sample(const Point& p1, const Point& p2, int ptsPixel,
                        const Point& s, float delta, std::vector<Point>& line) {
     if(ptsPixel<2) return;
@@ -170,46 +197,52 @@ void DualPixel::sample(const Point& p1, const Point& p2, int ptsPixel,
     }
 }
 
-// Update fields vertex and level, knowing whether we turn.
-void DualPixel::update(bool left, bool right) {
+/// Move to next adjacent dual pixel, knowing whether we turn.
+/// \param left make a left turn?
+/// \param right make a right turn?
+/// Parameters \a left and \a right are exclusive. They can be both \c false,
+/// meaning no turn occurs.
+void DualPixel::move(bool left, bool right) {
+    // New direction
+    if(left  && ++_d>3) _d=0;
+    if(right && --_d<0) _d=3;
+    // New edgel of entry
     int base= (right? 0: (left? 2:1));
-    if(! right) {
-        vertex[0] = vertex[base];
-        level[0] = level[base];
-    }
-    if(! left) {
-        vertex[3] = vertex[++base];
-        level[3] = level[base];
-    }
+    _vertex[0] = _vertex[base]; _level[0] = _level[base++]; // no-op for right
+    _vertex[3] = _vertex[base]; _level[3] = _level[base];   // no-op for left
+    // Update the other two vertices 
     Dir d=_d;
-    Point p=vertex[0];
+    Point p=_vertex[0];
     for(int i=1; i<=2; i++) {
         p += delta[d];
         if(++d==4) d=0;
-        level[i] = _im[(size_t)p.y*_w+(size_t)p.x];
-        vertex[i] = p;
+        _level[i] = _im[(size_t)p.y*_w+(size_t)p.x];
+        _vertex[i] = p;
     }
 }
 
-/// Find exit point of level line in dual pixel entering at \a p.
+/// The dual pixel is moved to the adjacent one. Find exit point of level line
+/// entering at \a p in the dual pixel. The level line is sampled up to there. 
+/// \param[in,out] p entry point into the dual pixel
+/// \param l level of the level line
+/// \param ptsPixel number of points of discretization per pixel.
+/// \param[out] line intermediate samples stored here.
 void DualPixel::follow(Point& p, float l, int ptsPixel,
                        std::vector<Point>& line) {
-    assert(level[0]<l && l<level[3]);
+    assert(_level[0]<l && l<_level[3]);
     Point b(p), m(p), s(p); // b=init, m=corner, s=saddle
     float xy = std::numeric_limits<float>::quiet_NaN();
     bool corner = (ptsPixel>0) && find_corner(m,l,s,xy);
-    bool right= (l<level[1]);
-    bool left = (level[2]<l);
+    bool right= (l<_level[1]); // Is there an exit at the left?
+    bool left = (_level[2]<l); // Is there an exit at the right?
     if(left && right) { // saddle point: test l<saddle_level without division
         float num=numSaddle(), denom=denomSaddle();
         right = (denom>0)? (l*denom<num): (l*denom>num);
         left = !right;
     }
-    if(left  && ++_d>3) _d=0;
-    if(right && --_d<0) _d=3;
-    update(left,right);
-    float coord = linear(level[0], l, level[3]);
-    p = vertex[0] + coord*delta[_d+1]; // Safe: delta[4]==delta[0]
+    move(left,right);
+    float coord = linear(_level[0], l, _level[3]);
+    p = _vertex[0] + coord*delta[_d+1]; // Safe: delta[4]==delta[0]
     if(xy == xy) { // Hyperbola: do not sample otherwise (ie, straight)
         if(corner) { // Sample until corner point m
             sample(b,m, ptsPixel, s,xy, line);
@@ -220,12 +253,20 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
 }
 
 /// Mark the edge as "visited", return \c false if already visited.
+/// \param visit stores the edgels traversed from the south at current level.
+/// \param inter (optional) rows of image traversed are marked with \a idx.
+/// \param idx a unique identifier for the level line.
+/// \param p the current position in the tracking of the level line.
+/// \return whether the tracking must continue (loop not closed yet).
+/// When we go through a horizontal data row and going south, we store the
+/// visit. If the edgel was already visited at current level, we came back
+/// at starting point and must stop.
 bool DualPixel::mark_visit(std::vector<bool>& visit,
                            std::vector< std::vector<Inter> >* inter,
                            size_t idx, const Point& p) const {
     bool cont=true;
     if(_d==S) {
-        size_t i = (size_t)vertex[0].y*_w+(size_t)vertex[0].x;
+        size_t i = (size_t)_vertex[0].y*_w+(size_t)_vertex[0].x;
         cont = !visit[i];
         visit[i] = true;
     }
@@ -234,7 +275,17 @@ bool DualPixel::mark_visit(std::vector<bool>& visit,
     return cont;
 }
 
-/// Extract line at level l
+/// Extract level line passing through a given starting point. 
+/// \param data the values of pixels in a 1D array.
+/// \param w the number of pixel columns in \a data.
+/// \param visit array to store the visited explored horizontal edgels.
+/// \param ptsPixel number of points of discretization per pixel.
+/// \param p the starting point.
+/// \param[in,out] ll the level line: level already stored, find its line.
+/// \param idx a unique identifier for the level line.
+/// \param inter[out] (optional) rows of image traversed are marked with \a idx.
+/// \a inter is used to recover the tree hierarchy at the end, could be
+/// omitted if the tree is not required, in which case \a idx is unused.
 static void extract(const unsigned char* data, size_t w,
                     std::vector<bool>& visit, int ptsPixel,
                     Point p, LevelLine& ll, size_t idx,
@@ -251,7 +302,15 @@ static void extract(const unsigned char* data, size_t w,
         *it += delta;
 }
 
-/// Level lines extraction algorithm
+/// Level lines extraction algorithm.
+/// \param data the values of pixels in a 1D array.
+/// \param w the number of pixel columns in \a data.
+/// \param h the number of pixel lines in \a data.
+/// \param offset the minimal level to be extracted.
+/// \param step the level step for extraction.
+/// \param ptsPixel number of points of discretization per pixel.
+/// \param[out] ll storage for the extracted level lines.
+/// \param inter[out] (optional) rows of image traversed by ll are marked.
 void extract(const unsigned char* data, size_t w, size_t h,
              float offset, float step, int ptsPixel,
              std::vector<LevelLine*>& ll,
