@@ -138,7 +138,24 @@ inline float sign(float f) {
     return (f>0)? +1: -1;
 }
 
-/// Find extremal curvature point on hyperbola branch
+/// Decompose hyperbola branch.
+/// Inside the dual pixel, the level set has implicit equation
+/// \f[ D*(x-xs)(y-ys)+N/D = l. \f]
+/// This is true only if \f$D\neq0\f$ (otherwise we have just a line segment).
+/// The center of the hyperbola (xs,ys) is a saddle point, its level is N/D.
+/// Of interest, the vertex of the hyperbola is a point of maximal curvature.
+/// It is located at
+/// \f[(xs,ys)+(\pm\sqrt{|(Dl-N)/D^2|},\pm\sqrt{|(Dl-N)/D^2|}).\f]
+/// The signs are determined by the fact that the vertex is in the same quadrant
+/// as the input point p with respect to (xs,ys).
+/// The equation of hyperbola is written
+/// \f[ (x-xs)(y-ys) = \delta. \f]
+/// \param[in] p a point on an edgel of the dual pixel and on the hyperbola.
+/// \param[out] p vertex of hyperbola (point of extremal curvature)
+/// \param l level.
+/// \param[out] s center of the hyperbola, saddle point of the image.
+/// \param[out] delta parameter of hyperbola (sqrt(2*delta) is semi major axis)
+/// \return Do we really have a hyperbola? It may be a segment.
 bool DualPixel::find_corner(Point& p, float l, Point& s, float& delta) const {
     float D=denomSaddle();
     if(D*D<1e-4) return false; // Degenerate hyperbola
@@ -233,8 +250,8 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
     Point b(p), m(p), s(p); // b=init, m=corner, s=saddle
     float xy = std::numeric_limits<float>::quiet_NaN();
     bool corner = (ptsPixel>0) && find_corner(m,l,s,xy);
-    bool right= (l<_level[1]); // Is there an exit at the left?
-    bool left = (_level[2]<l); // Is there an exit at the right?
+    bool right= (l<_level[1]); // Is there an exit at the right?
+    bool left = (_level[2]<l); // Is there an exit at the left?
     if(left && right) { // saddle point: test l<saddle_level without division
         float num=numSaddle(), denom=denomSaddle();
         right = (denom>0)? (l*denom<num): (l*denom>num);
