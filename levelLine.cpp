@@ -168,14 +168,9 @@ bool DualPixel::find_corner(Point& p, float l, Point& s, float& delta) const {
     s.y = (_level[base]-_level[MOD4(base+3)])/D;
     s += _vertex[base];
 #undef MOD4
-    float s1 = vert? sign(p.x-s.x): sign(p.y-s.y);
-    float s2 = sign(delta);
-    float d = s1*sqrt(s2*delta);
-    s1 = 1;
-    if(! vert) std::swap(s1,s2);
-    p = s;
-    p.x += s1*d;
-    p.y += s2*d;
+    float d = sqrt(std::abs(delta));
+    p.x = s.x + sign(p.x-s.x)*d;
+    p.y = s.y + sign(p.y-s.y)*d;
     return (_vertex[base].x<p.x && p.x<_vertex[base].x+1 &&
             _vertex[base].y<p.y && p.y<_vertex[base].y+1);
 }
