@@ -248,9 +248,10 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
     bool corner = (ptsPixel>0) && find_corner(m,l,s,xy);
     bool right= (l<_level[1]); // Is there an exit at the right?
     bool left = (_level[2]<l); // Is there an exit at the left?
-    if(left && right) { // saddle point: test l<saddle_level without division
+    if(left && right) { // saddle point
         float num=numSaddle(), denom=denomSaddle();
-        right = (denom>0)? (l*denom<num): (l*denom>num);
+        assert(denom <=0);
+        right = (l*denom>num); // test l<saddle_level without division
         left = !right;
     }
     move(left,right);
