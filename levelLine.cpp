@@ -228,14 +228,10 @@ void DualPixel::move(bool left, bool right) {
     _vertex[0] = _vertex[base]; _level[0] = _level[base++]; // no-op for right
     _vertex[3] = _vertex[base]; _level[3] = _level[base];   // no-op for left
     // Update the other two vertices 
-    Dir d=_d;
-    Point p=_vertex[0];
-    for(int i=1; i<=2; i++) {
-        p += delta[d];
-        if(++d==4) d=0;
-        _level[i] = _im[(size_t)p.y*_w+(size_t)p.x];
-        _vertex[i] = p;
-    }
+    _vertex[1] = _vertex[0] + delta[_d];
+    _vertex[2] = _vertex[3] + delta[_d];
+    _level[1] = _im[(size_t)_vertex[1].y*_w+(size_t)_vertex[1].x];
+    _level[2] = _im[(size_t)_vertex[2].y*_w+(size_t)_vertex[2].x];
 }
 
 /// The dual pixel is moved to the adjacent one. Find exit point of level line
