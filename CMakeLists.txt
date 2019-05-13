@@ -38,14 +38,14 @@ set(SRC
     fill_curve.cpp fill_curve.h
     gass.cpp gass.h
     image.cpp image.h
-    io_png.c io_png.h
-    io_tiff.c io_tiff.h
     levelLine.cpp levelLine.h
     lltree.cpp lltree.h
-    main.cpp
     microCurv.h microCurv.cpp
     xmtime.h)
-add_executable(microCurv ${SRC})
+add_executable(microCurv ${SRC}
+               io_png.c io_png.h
+               io_tiff.c io_tiff.h
+               main.cpp)
 target_link_libraries(microCurv ${PNG_LIBRARIES} ${TIFF_LIBRARIES})
 
 find_package(OpenMP)
@@ -61,3 +61,5 @@ if(UNIX)
     set_target_properties(microCurv PROPERTIES COMPILE_FLAGS
                           "-Wall -Wextra -Werror ${OpenMP_CXX_FLAGS}")
 endif()
+
+add_executable(test_extract ${SRC} test_extract.cpp)
