@@ -70,12 +70,8 @@ void zoom_line(std::vector<Point>& line, float zoom) {
 /// of the level line is recorded: south means it enters from the top horizontal
 /// edgel, east from the right vertical, north from the bottom horizontal and
 /// west from the right.
-/// The object stores the coordinates of its 4 vertices (data points of the
-/// image) and their respective level in arrays. They are stored in clockwise
-/// order starting from the right hand side of the entry point. For example, if
-/// the direction of entry is south, meaning the line comes from the upper
-/// horizontal edgel, the first vertex is top-left, followed by bottom-left,
-/// bottom-right, and top-right.
+/// The object stores the levels at its 4 vertices (data points of the image),
+/// in clockwise order starting from the top left vertex.
 class DualPixel {
 public:
     DualPixel(Point& p, float l, const unsigned char* im, size_t w);
@@ -87,7 +83,7 @@ private:
     const unsigned char* _im; ///< The image stored as 1D array.
     const size_t _w; ///< Number of columns of image.
     unsigned char _level[4]; /// The levels at the 4 data points.
-    Point _vertex[4]; /// The positions of the 4 data points.
+    Point _pos; /// The position of the top-left vertex of the dual pixel.
     Dir _d; /// Direction of entry into dual pixel.
 
     void move(bool left, bool right);
@@ -113,11 +109,10 @@ inline float linear(float v0, float v, float v1) {
 /// the level line is at \a p+(x,0), with 0<x<1. As output, \a p is moved to
 /// this position.
 DualPixel::DualPixel(Point& p, float l, const unsigned char* im, size_t w)
-: _im(im), _w(w), _d(S) {
+: _im(im), _w(w), _pos(p), _d(S) {
     Dir d=_d;
     for(int i=0; i<4; i++) {
         _level[i] = im[(size_t)p.y*w+(size_t)p.x];
-        _vertex[i] = p;
         p += delta[d];
         if(++d==4) d=0; // Not useful if S=0, but better be safe
     }
@@ -160,19 +155,12 @@ bool DualPixel::find_corner(Point& p, float l, Point& s, float& delta) const {
     float D=denomSaddle();
     if(D*D<1e-4) return false; // Degenerate hyperbola
     delta = (D*l-numSaddle())/(D*D);
-    bool vert = (_d==S||_d==N); // Vertical direction?
-    if(! vert) { D=-D; delta=-delta; }
-#define MOD4(d) ((d)&0x3) // Modulo 4
-    int base=MOD4(S-_d+4); // S->0, E->3, N->2, W->1
-    s.x = (_level[base]-_level[MOD4(base+1)])/D;
-    s.y = (_level[base]-_level[MOD4(base+3)])/D;
-    s += _vertex[base];
-#undef MOD4
+    s.x = _pos.x + (_level[0]-_level[1])/D;
+    s.y = _pos.y + (_level[0]-_level[3])/D;
     float d = sqrt(std::abs(delta));
     p.x = s.x + sign(p.x-s.x)*d;
     p.y = s.y + sign(p.y-s.y)*d;
-    return (_vertex[base].x<p.x && p.x<_vertex[base].x+1 &&
-            _vertex[base].y<p.y && p.y<_vertex[base].y+1);
+    return (_pos.x<p.x && p.x<_pos.x+1 && _pos.y<p.y && p.y<_pos.y+1);
 }
 
 /// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta.
@@ -215,18 +203,15 @@ void DualPixel::sample(const Point& p1, const Point& p2, int ptsPixel,
 /// Parameters \a left and \a right are exclusive. They can be both \c false,
 /// meaning no turn occurs.
 void DualPixel::move(bool left, bool right) {
-    // New direction
+    // update direction
     if(left  && ++_d>3) _d=0;
     if(right && --_d<0) _d=3;
-    // New edgel of entry
-    int base= (right? 0: (left? 2:1));
-    _vertex[0] = _vertex[base]; _level[0] = _level[base++]; // no-op for right
-    _vertex[3] = _vertex[base]; _level[3] = _level[base];   // no-op for left
-    // Update the other two vertices 
-    _vertex[1] = _vertex[0] + delta[_d];
-    _vertex[2] = _vertex[3] + delta[_d];
-    _level[1] = _im[(size_t)_vertex[1].y*_w+(size_t)_vertex[1].x];
-    _level[2] = _im[(size_t)_vertex[2].y*_w+(size_t)_vertex[2].x];
+    // update top-left vertex
+    _pos += delta[_d];
+    // update levels at vertices
+    size_t ind = (size_t)_pos.y*_w+(size_t)_pos.x;
+    _level[0] = _im[ind];    _level[3] = _im[ind+1];
+    _level[1] = _im[ind+_w]; _level[2] = _im[ind+_w+1];
 }
 
 /// The dual pixel is moved to the adjacent one. Find exit point of level line
@@ -237,21 +222,22 @@ void DualPixel::move(bool left, bool right) {
 /// \param[out] line intermediate samples stored here.
 void DualPixel::follow(Point& p, float l, int ptsPixel,
                        std::vector<Point>& line) {
-    assert(_level[0]<l && l<_level[3]);
+    assert(_level[_d]<l && l<_level[(_d+3)%4]);
     Point b(p), m(p), s(p); // b=init, m=corner, s=saddle
     float xy = std::numeric_limits<float>::quiet_NaN();
     bool corner = (ptsPixel>0) && find_corner(m,l,s,xy);
-    bool right= (l<_level[1]); // Is there an exit at the right?
-    bool left = (_level[2]<l); // Is there an exit at the left?
+    bool left  = (l>_level[(_d+2)%4]); // Is there an exit at the left?
+    bool right = (l<_level[(_d+1)%4]); // Is there an exit at the right?
     if(left && right) { // saddle point
         float num=numSaddle(), denom=denomSaddle();
-        assert(denom <=0);
-        right = (l*denom>num); // test l<saddle_level without division
+        right = (denom>0)? (l*denom<num): (l*denom>num);// l<num/denom? w/o div
         left = !right;
     }
     move(left,right);
-    float coord = linear(_level[0], l, _level[3]);
-    p = _vertex[0] + coord*delta[_d+1]; // Safe: delta[4]==delta[0]
+    float coord = linear(_level[_d], l, _level[(_d+3)%4]);
+    p = _pos;
+    for(Dir d=0; d<_d; d++) p += delta[d];
+    p += coord*delta[_d+1]; // Safe: delta[4]==delta[0]
     if(xy == xy) { // Hyperbola: do not sample otherwise (ie, straight)
         if(corner) { // Sample until corner point m
             sample(b,m, ptsPixel, s,xy, line);
@@ -275,7 +261,7 @@ bool DualPixel::mark_visit(std::vector<bool>& visit,
                            size_t idx, const Point& p) const {
     bool cont=true;
     if(_d==S) {
-        size_t i = (size_t)_vertex[0].y*_w+(size_t)_vertex[0].x;
+        size_t i = (size_t)_pos.y*_w+(size_t)_pos.x;
         cont = !visit[i];
         visit[i] = true;
     }
