@@ -22,7 +22,6 @@
 
 #include "levelLine.h"
 #include <cmath>
-#include <limits>
 #include <cassert>
 
 /// South, East, North, West: directions of entry/exit in a dual pixel.
@@ -64,6 +63,95 @@ void zoom_line(std::vector<Point>& line, float zoom) {
     }
 }
 
+/// Parameters of a hyperbola.
+/// Inside the dual pixel, the level set has implicit equation
+/// \f[ D*(x-xs)(y-ys)+N/D = l. \f]
+/// This is true only if \f$D\neq0\f$ (otherwise we have just a line segment).
+/// The center of the hyperbola (xs,ys) is a saddle point, its level is N/D.
+/// Of interest, the vertex of the hyperbola is a point of maximal curvature.
+/// It is located at
+/// \f[(xs,ys)+(\pm\sqrt{|(Dl-N)/D^2|},\pm\sqrt{|(Dl-N)/D^2|}).\f]
+/// The signs are determined by the fact that the vertex is in the same quadrant
+/// as the input point p with respect to (xs,ys).
+/// The equation of hyperbola is written
+/// \f[ (x-xs)(y-ys) = \delta. \f]
+class Hyperbola {
+public:
+    float num, denom; /// The saddle value is num/denom
+    Point s; ///< Saddle point=center of hyperbola
+    Point v; ///< Vertex of hyperbola=point of maximal curvature
+    float delta; ///< Parameter of hyperbola (sqrt(2*delta) = semi major axis)
+
+    Hyperbola(): denom(0) {}
+    bool valid() const { return (denom!=0); }
+    bool init(const Point& pos, const Point& p, unsigned char lev[4], float l);
+    bool vertex_in_dual_pixel(const Point& p) const;
+    void sample(const Point& p1, const Point& p2, int ptsPixel,
+                std::vector<Point>& line) const;
+private:
+    static float sign(float f) { return (f>0)? +1: -1; }
+};
+
+/// Decompose hyperbola branch.
+/// \param pos the top-left vertex of the dual pixel.
+/// \param p a point on an edgel of the dual pixel and on the hyperbola.
+/// \param level the levels at the four vertices of the dual pixel.
+/// \param l level.
+/// \return Do we really have a hyperbola? It may be a segment.
+bool Hyperbola::init(const Point& pos, const Point& p,
+                     unsigned char level[4],float l){
+    denom = (float)level[0]+level[2]-level[1]-level[3];
+    if(denom == 0)
+        return false; // Degenerate hyperbola
+    num = level[0]*(float)level[2]-level[1]*(float)level[3];
+    float d = 1.0f/denom;
+    s.x = pos.x + (level[0]-level[1])*d;
+    s.y = pos.y + (level[0]-level[3])*d;
+    delta = (denom*l-num)*(d*d);
+    d = sqrt(std::abs(delta));
+    v.x = s.x + sign(p.x-s.x)*d;
+    v.y = s.y + sign(p.y-s.y)*d;
+    return true;
+}
+
+/// Tell if the vertex of the hyperbola branch is inside the dual pixel of
+/// top-left corner \a p.
+bool Hyperbola::vertex_in_dual_pixel(const Point& p) const {
+    return (p.x<v.x && v.x<p.x+1 && p.y<v.y && v.y<p.y+1);
+}
+
+/// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta.
+/// \param p1 start point.
+/// \param p2 end point.
+/// \param ptsPixel number of points of discretization per pixel.
+/// \param[out] line where the sampled points are stored.
+void Hyperbola::sample(const Point& p1, const Point& p2, int ptsPixel,
+                       std::vector<Point>& line) const {
+    if(ptsPixel<2) return;
+    Point p = p2-p1;
+    if(p.x<0) p.x=-p.x;
+    if(p.y<0) p.y=-p.y;
+    if(p.x>p.y) { // Uniform sample along x
+        int n = ceil(p.x*ptsPixel);
+        float dx = (p2.x-p1.x)/n;
+        p = p1;
+        for(int i=1; i<n; i++) {
+            p.x += dx;
+            p.y = s.y + delta/(p.x-s.x);
+            line.push_back(p);
+        }
+    } else { // Uniform sample along y
+        int n = ceil(p.y*ptsPixel);
+        float dy = (p2.y-p1.y)/n;
+        p = p1;
+        for(int i=1; i<n; i++) {
+            p.y += dy;
+            p.x = s.x + delta/(p.y-s.y);
+            line.push_back(p);
+        }
+    }
+}
+
 /// A mobile dual pixel, square whose vertices are 4 data points.
 /// This is the main structure to extract a level line, moving from dual pixel
 /// to an adjacent one until coming back at starting point. The entry direction
@@ -87,11 +175,6 @@ private:
     Dir _d; /// Direction of entry into dual pixel.
 
     void move(bool left, bool right);
-    float numSaddle() const; ///< Numerator of saddle value
-    float denomSaddle() const; ///< Denominator of saddle value
-    bool find_corner(Point& p, float l, Point& s, float& delta) const;
-    void sample(const Point& p1, const Point& p2, int ptsPixel,
-                const Point& s, float delta, std::vector<Point>& line);
 };
 
 /// Return x for y=v on line joining (0,v0) and (1,v1).
@@ -117,84 +200,6 @@ DualPixel::DualPixel(Point& p, float l, const unsigned char* im, size_t w)
         if(++d==4) d=0; // Not useful if S=0, but better be safe
     }
     p += linear(_level[0],l,_level[3])*delta[_d+1]; // Safe: delta[4]==delta[0]
-}
-
-/// The saddle value can be expressed as a fraction. This is its numerator.
-inline float DualPixel::numSaddle() const {
-    return (_level[0]*(float)_level[2]-_level[1]*(float)_level[3]);
-}
-
-/// The saddle value can be expressed as a fraction. This is its denominator.
-inline float DualPixel::denomSaddle() const {
-    return ((float)_level[0]+_level[2]-_level[1]-_level[3]);
-}
-
-inline float sign(float f) {
-    return (f>0)? +1: -1;
-}
-
-/// Decompose hyperbola branch.
-/// Inside the dual pixel, the level set has implicit equation
-/// \f[ D*(x-xs)(y-ys)+N/D = l. \f]
-/// This is true only if \f$D\neq0\f$ (otherwise we have just a line segment).
-/// The center of the hyperbola (xs,ys) is a saddle point, its level is N/D.
-/// Of interest, the vertex of the hyperbola is a point of maximal curvature.
-/// It is located at
-/// \f[(xs,ys)+(\pm\sqrt{|(Dl-N)/D^2|},\pm\sqrt{|(Dl-N)/D^2|}).\f]
-/// The signs are determined by the fact that the vertex is in the same quadrant
-/// as the input point p with respect to (xs,ys).
-/// The equation of hyperbola is written
-/// \f[ (x-xs)(y-ys) = \delta. \f]
-/// \param[in] p a point on an edgel of the dual pixel and on the hyperbola.
-/// \param[out] p vertex of hyperbola (point of extremal curvature)
-/// \param l level.
-/// \param[out] s center of the hyperbola, saddle point of the image.
-/// \param[out] delta parameter of hyperbola (sqrt(2*delta) is semi major axis)
-/// \return Do we really have a hyperbola? It may be a segment.
-bool DualPixel::find_corner(Point& p, float l, Point& s, float& delta) const {
-    float D=denomSaddle();
-    if(D*D<1e-4) return false; // Degenerate hyperbola
-    delta = (D*l-numSaddle())/(D*D);
-    s.x = _pos.x + (_level[0]-_level[1])/D;
-    s.y = _pos.y + (_level[0]-_level[3])/D;
-    float d = sqrt(std::abs(delta));
-    p.x = s.x + sign(p.x-s.x)*d;
-    p.y = s.y + sign(p.y-s.y)*d;
-    return (_pos.x<p.x && p.x<_pos.x+1 && _pos.y<p.y && p.y<_pos.y+1);
-}
-
-/// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta.
-/// \param p1 start point.
-/// \param p2 end point.
-/// \param ptsPixel number of points of discretization per pixel.
-/// \param s center of hyperbola.
-/// \param delta parameter of hyperbola (sqrt(2) times semi major axis).
-/// \param[out] line where the sampled points are stored.
-void DualPixel::sample(const Point& p1, const Point& p2, int ptsPixel,
-                       const Point& s, float delta, std::vector<Point>& line) {
-    if(ptsPixel<2) return;
-    Point p = p2-p1;
-    if(p.x<0) p.x=-p.x;
-    if(p.y<0) p.y=-p.y;
-    if(p.x>p.y) { // Uniform sample along x
-        int n = int(p.x*ptsPixel+0.99f);
-        float dx = (p2.x-p1.x)/n;
-        p = p1;
-        for(int i=1; i<n; i++) {
-            p.x += dx;
-            p.y = s.y + delta/(p.x-s.x);
-            line.push_back(p);
-        }
-    } else { // Uniform sample along y
-        int n = int(p.y*ptsPixel+0.99f);
-        float dy = (p2.y-p1.y)/n;
-        p = p1;
-        for(int i=1; i<n; i++) {
-            p.y += dy;
-            p.x = s.x + delta/(p.y-s.y);
-            line.push_back(p);
-        }
-    }
 }
 
 /// Move to next adjacent dual pixel, knowing whether we turn.
@@ -223,27 +228,33 @@ void DualPixel::move(bool left, bool right) {
 void DualPixel::follow(Point& p, float l, int ptsPixel,
                        std::vector<Point>& line) {
     assert(_level[_d]<l && l<_level[(_d+3)%4]);
-    Point b(p), m(p), s(p); // b=init, m=corner, s=saddle
-    float xy = std::numeric_limits<float>::quiet_NaN();
-    bool corner = (ptsPixel>0) && find_corner(m,l,s,xy);
+    Hyperbola h;
+    bool vInside = false;
+    if(ptsPixel>0) {
+        h.init(_pos, p, _level, l);
+        vInside = h.vertex_in_dual_pixel(_pos);
+    }
+
     bool left  = (l>_level[(_d+2)%4]); // Is there an exit at the left?
     bool right = (l<_level[(_d+1)%4]); // Is there an exit at the right?
-    if(left && right) { // saddle point
-        float num=numSaddle(), denom=denomSaddle();
-        right = (denom>0)? (l*denom<num): (l*denom>num);// l<num/denom? w/o div
+    if(left && right) { // Disambiguate saddle point
+        right = (l<h.num/h.denom);
         left = !right;
     }
     move(left,right);
+
     float coord = linear(_level[_d], l, _level[(_d+3)%4]);
+    Point pIni = p;
     p = _pos;
     for(Dir d=0; d<_d; d++) p += delta[d];
     p += coord*delta[_d+1]; // Safe: delta[4]==delta[0]
-    if(xy == xy) { // Hyperbola: do not sample otherwise (ie, straight)
-        if(corner) { // Sample until corner point m
-            sample(b,m, ptsPixel, s,xy, line);
-            line.push_back(b=m);
+
+    if(h.valid()) { // Hyperbola: do not sample otherwise (ie, straight)
+        if(vInside) { // Sample until vertex of hyperbola
+            h.sample(pIni, h.v, ptsPixel, line);
+            line.push_back(pIni=h.v);
         }
-        sample(b,p, ptsPixel, s,xy, line); // Sample until end point
+        h.sample(pIni, p, ptsPixel, line); // Sample until end point
     }
 }
 
