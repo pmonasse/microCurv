@@ -246,6 +246,11 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
     p += coord*delta[_d+1]; // Safe: delta[4]==delta[0]
     // 4. Sample hyperbola in previous dual pixel position
     if(h.valid() && ptsPixel>0) { // Do not sample if not hyperbola (straight)
+        if(std::abs(h.delta) < 1.0e-2f) { // Saddle level: one or two segments
+            if(vInside)
+                line.push_back(h.v); // Put vertex only (almost saddle point)
+            return;
+        }
         if(vInside) { // Sample until vertex of hyperbola
             h.sample(pIni, h.v, ptsPixel, line);
             line.push_back(pIni=h.v);
