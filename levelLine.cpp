@@ -82,9 +82,8 @@ public:
     Point v; ///< Vertex of hyperbola=point of maximal curvature
     float delta; ///< Parameter of hyperbola (sqrt(2*delta) = semi major axis)
 
-    Hyperbola(): denom(0) {}
+    Hyperbola(const Point& pos, const Point& p, unsigned char lev[4], float l);
     bool valid() const { return (denom!=0); }
-    bool init(const Point& pos, const Point& p, unsigned char lev[4], float l);
     bool vertex_in_dual_pixel(const Point& p) const;
     void sample(const Point& p1, const Point& p2, int ptsPixel,
                 std::vector<Point>& line) const;
@@ -98,12 +97,13 @@ private:
 /// \param level the levels at the four vertices of the dual pixel.
 /// \param l level.
 /// \return Do we really have a hyperbola? It may be a segment.
-bool Hyperbola::init(const Point& pos, const Point& p,
-                     unsigned char level[4],float l){
-    denom = (float)level[0]+level[2]-level[1]-level[3];
-    if(denom == 0)
-        return false; // Degenerate hyperbola
+Hyperbola::Hyperbola(const Point& pos, const Point& p,
+                     unsigned char level[4],float l) {
     num = level[0]*(float)level[2]-level[1]*(float)level[3];
+    denom = (float)level[0]+level[2]-level[1]-level[3];
+    delta = 0;
+    if(denom == 0)
+        return; // Degenerate hyperbola
     float d = 1.0f/denom;
     s.x = pos.x + (level[0]-level[1])*d;
     s.y = pos.y + (level[0]-level[3])*d;
@@ -111,13 +111,12 @@ bool Hyperbola::init(const Point& pos, const Point& p,
     d = sqrt(std::abs(delta));
     v.x = s.x + sign(p.x-s.x)*d;
     v.y = s.y + sign(p.y-s.y)*d;
-    return true;
 }
 
 /// Tell if the vertex of the hyperbola branch is inside the dual pixel of
 /// top-left corner \a p.
 bool Hyperbola::vertex_in_dual_pixel(const Point& p) const {
-    return (p.x<v.x && v.x<p.x+1 && p.y<v.y && v.y<p.y+1);
+    return valid() && (p.x<v.x && v.x<p.x+1 && p.y<v.y && v.y<p.y+1);
 }
 
 /// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta.
@@ -228,13 +227,10 @@ void DualPixel::move(bool left, bool right) {
 void DualPixel::follow(Point& p, float l, int ptsPixel,
                        std::vector<Point>& line) {
     assert(_level[_d]<l && l<_level[(_d+3)%4]);
-    Hyperbola h;
-    bool vInside = false;
-    if(ptsPixel>0) {
-        h.init(_pos, p, _level, l);
-        vInside = h.vertex_in_dual_pixel(_pos);
-    }
-
+    // 1. Compute hyperbola equation
+    Hyperbola h(_pos, p, _level, l);
+    bool vInside = h.vertex_in_dual_pixel(_pos);
+    // 2. Move dual pixel to new position
     bool left  = (l>_level[(_d+2)%4]); // Is there an exit at the left?
     bool right = (l<_level[(_d+1)%4]); // Is there an exit at the right?
     if(left && right) { // Disambiguate saddle point
@@ -242,14 +238,14 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
         left = !right;
     }
     move(left,right);
-
+    // 3. Find entry point in new dual pixel (=exit point of old one)
     float coord = linear(_level[_d], l, _level[(_d+3)%4]);
     Point pIni = p;
     p = _pos;
     for(Dir d=0; d<_d; d++) p += delta[d];
     p += coord*delta[_d+1]; // Safe: delta[4]==delta[0]
-
-    if(h.valid()) { // Hyperbola: do not sample otherwise (ie, straight)
+    // 4. Sample hyperbola in previous dual pixel position
+    if(h.valid() && ptsPixel>0) { // Do not sample if not hyperbola (straight)
         if(vInside) { // Sample until vertex of hyperbola
             h.sample(pIni, h.v, ptsPixel, line);
             line.push_back(pIni=h.v);
