@@ -173,6 +173,7 @@ private:
     Point _pos; /// The position of the top-left vertex of the dual pixel.
     Dir _d; /// Direction of entry into dual pixel.
 
+    void update_levels();
     void move(bool left, bool right);
 };
 
@@ -192,13 +193,15 @@ inline float linear(float v0, float v, float v1) {
 /// this position.
 DualPixel::DualPixel(Point& p, float l, const unsigned char* im, size_t w)
 : _im(im), _w(w), _pos(p), _d(S) {
-    Dir d=_d;
-    for(int i=0; i<4; i++) {
-        _level[i] = im[(size_t)p.y*w+(size_t)p.x];
-        p += delta[d];
-        if(++d==4) d=0; // Not useful if S=0, but better be safe
-    }
+    update_levels();
     p += linear(_level[0],l,_level[3])*delta[_d+1]; // Safe: delta[4]==delta[0]
+}
+
+/// Update levels at vertices.
+void DualPixel::update_levels() {
+    size_t ind = (size_t)_pos.y*_w+(size_t)_pos.x;
+    _level[0] = _im[ind];    _level[3] = _im[ind+1];
+    _level[1] = _im[ind+_w]; _level[2] = _im[ind+_w+1];
 }
 
 /// Move to next adjacent dual pixel, knowing whether we turn.
@@ -212,10 +215,7 @@ void DualPixel::move(bool left, bool right) {
     if(right && --_d<0) _d=3;
     // update top-left vertex
     _pos += delta[_d];
-    // update levels at vertices
-    size_t ind = (size_t)_pos.y*_w+(size_t)_pos.x;
-    _level[0] = _im[ind];    _level[3] = _im[ind+1];
-    _level[1] = _im[ind+_w]; _level[2] = _im[ind+_w+1];
+    update_levels();
 }
 
 /// The dual pixel is moved to the adjacent one. Find exit point of level line
