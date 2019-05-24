@@ -174,7 +174,7 @@ private:
     Dir _d; /// Direction of entry into dual pixel.
 
     void update_levels();
-    void move(bool left, bool right);
+    Point move(bool left, bool right, float l);
 };
 
 /// Return x for y=v on line joining (0,v0) and (1,v1).
@@ -207,15 +207,23 @@ void DualPixel::update_levels() {
 /// Move to next adjacent dual pixel, knowing whether we turn.
 /// \param left make a left turn?
 /// \param right make a right turn?
+/// \param l the level of the level line
+/// \return subpixel entry point in new dual pixel (=exit point of old one)
 /// Parameters \a left and \a right are exclusive. They can be both \c false,
 /// meaning no turn occurs.
-void DualPixel::move(bool left, bool right) {
+Point DualPixel::move(bool left, bool right, float l) {
     // update direction
     if(left  && ++_d>3) _d=0;
     if(right && --_d<0) _d=3;
     // update top-left vertex
     _pos += delta[_d];
     update_levels();
+
+    float coord = linear(_level[_d], l, _level[(_d+3)%4]);
+    Point p = _pos;
+    for(Dir d=0; d<_d; d++) p += delta[d];
+    p += coord*delta[_d+1]; // Safe: delta[4]==delta[0]
+    return p;
 }
 
 /// The dual pixel is moved to the adjacent one. Find exit point of level line
@@ -237,21 +245,16 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
         right = (l<h.num/h.denom);
         left = !right;
     }
-    move(left,right);
-    // 3. Find entry point in new dual pixel (=exit point of old one)
-    float coord = linear(_level[_d], l, _level[(_d+3)%4]);
-    Point pIni = p;
-    p = _pos;
-    for(Dir d=0; d<_d; d++) p += delta[d];
-    p += coord*delta[_d+1]; // Safe: delta[4]==delta[0]
-    // 4. Sample hyperbola in previous dual pixel position
+    Point pIni = p; // Keep track of entry point before moving to exit
+    p = move(left, right, l);
+    // 3. Sample hyperbola in previous dual pixel position
     if(h.valid() && ptsPixel>0) { // Do not sample if not hyperbola (straight)
         if(std::abs(h.delta) < 1.0e-2f) { // Saddle level: one or two segments
             if(vInside)
                 line.push_back(h.v); // Put vertex only (almost saddle point)
             return;
         }
-        if(vInside) { // Sample until vertex of hyperbola
+        if(vInside) { // Sample from entry point to vertex of hyperbola
             h.sample(pIni, h.v, ptsPixel, line);
             line.push_back(pIni=h.v);
         }
