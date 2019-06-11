@@ -307,9 +307,6 @@ static void extract(const unsigned char* data, size_t w,
             break;
         dual.follow(p,ll.level,ptsPixel,ll.line);
     }
-    const Point delta(.5f, .5f);
-    for(std::vector<Point>::iterator it=ll.line.begin(); it!=ll.line.end();++it)
-        *it += delta;
 }
 
 /// Level lines extraction algorithm.

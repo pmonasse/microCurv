@@ -86,8 +86,8 @@ static void curv(const std::vector<Point>& curve, int w,
         float v = dist(*p,*r);
         float d = u * v * dist(*q,*r); 
         float K = ((d==0)? 0: 2*det(*p,*q,*r)/d);
-        int i = (int)(curve[k].x-0.5f);
-        int j = (int)(curve[k].y-0.5f);
+        int i = (int)(curve[k].x);
+        int j = (int)(curve[k].y);
         curvatures[j*w+i].push_back(K);
         q = p;
         p = r;

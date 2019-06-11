@@ -25,8 +25,6 @@
 #include <algorithm>
 #include <cassert>
 
-static const Point delta(-0.5f,-0.5f);
-
 /// Sign of f2-f1
 inline signed char sign(float f1, float f2) {
     return ((f1<f2)? +1: -1);
@@ -60,8 +58,8 @@ static int last_point(const std::vector<Point>& curve) {
 /// Constructor
 PolyIterator::PolyIterator(const std::vector<Point>& curve) {
     size_t i = last_point(curve);
-    Point q = curve[i]+delta; // Previous vertex
-    p = curve[0]+delta;
+    Point q = curve[i]; // Previous vertex
+    p = curve[0];
     if(q.y==p.y) {
         bHorizontal = is_integer(p.y);
         dir = sign(q.x,p.x);
@@ -90,7 +88,7 @@ static void bound(std::vector< std::vector<float> >& inter, float x, int iy) {
 void PolyIterator::add_point(const Point& pi,
                              std::vector< std::vector<float> >& inter) {
     Point q = p;
-    p = pi+delta;
+    p = pi;
     signed char dirP = dir; // Previous direction
 
     if(q.y==p.y) { // Horizontal segment
@@ -139,7 +137,6 @@ void PolyIterator::add_point(const Point& pi,
 /// Fill curve with a single vertex
 template <class T>
 void fill_point(Point p, T value, T* out, size_t w) {
-    p += delta;
     if(is_integer(p.x) && is_integer(p.y))
         out[(int)p.y*w+(int)p.x] = value;
 }

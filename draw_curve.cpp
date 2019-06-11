@@ -71,10 +71,11 @@ void draw_curve(const std::vector<Point>& curve, unsigned char v,
                 unsigned char* im, int w, int h) {
     if(curve.empty())
         return;
+    Point delta(.5f, .5f);
     std::vector<Point>::const_iterator it=curve.begin();
     Point o = *it++;
     while(it != curve.end()) {
-        draw_line(o, *it, v, im,w,h);
+        draw_line(o+delta, *it+delta, v, im,w,h);
         o = *it++;
     }
 }
