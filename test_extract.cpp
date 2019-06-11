@@ -1,4 +1,5 @@
 #include "levelLine.h"
+#include "cmdLine.h"
 #include <sstream>
 
 static const unsigned char image1[4*4]= {
@@ -25,14 +26,14 @@ static const unsigned char image3[4*4]= {
 };
 // Saddle value: 4, saddle point outside
 
-void test_image(const unsigned char* im, size_t w, size_t h, float level) {
+void test_image(const unsigned char* im,size_t w,size_t h,float level,int ppp) {
     for(int i=0; i<h; i++) {
         for(int j=0; j<w; j++)
             std::cout << "\t" << (int)im[i*w+j];
         std::cout << std::endl;
     }
     std::vector<LevelLine*> ll;
-    extract(im,w,h, level, 256.0f, 5, ll);
+    extract(im,w,h, level, 256.0f, ppp, ll);
     for(std::vector<LevelLine*>::iterator it=ll.begin();it!=ll.end();++it) {
         std::cout << **it << std::endl;
         delete *it;
@@ -40,8 +41,13 @@ void test_image(const unsigned char* im, size_t w, size_t h, float level) {
 }
 
 int main(int argc, char** argv) {
+    CmdLine cmd;
+    int ppp=5;
+    cmd.add( make_option('p',ppp).doc("points per pixel") );
+    cmd.process(argc,argv);
     if(argc>2) {
         std::cerr << "Usage: " << argv[0] << " level" << std::endl;
+        std::cerr << cmd;
         return 1;
     }
     float level=4.0f;
@@ -55,13 +61,13 @@ int main(int argc, char** argv) {
     } else std::cout << "Default level: " << level << std::endl;
 
     std::cout << "image 1: saddle level at 4, two lines" << std::endl;
-    test_image(image1,4,4, level);
+    test_image(image1,4,4, level, ppp);
 
     std::cout << "image 2: saddle level at 4, single line" << std::endl;
-    test_image(image2,4,4, level);
+    test_image(image2,4,4, level, ppp);
 
     std::cout << "image 3: saddle level at 4, saddle pt outside" << std::endl;
-    test_image(image3,4,4, level);
+    test_image(image3,4,4, level, ppp);
 
     return 0;
 }
