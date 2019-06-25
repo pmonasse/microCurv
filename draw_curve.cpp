@@ -23,7 +23,7 @@
 #include "draw_curve.h"
 
 /// max(0,min(abs(v),m-1))
-static int saturate(float v, int m) {
+static int clip(float v, int m) {
     if(v<0)
         return 0;
     if(v>=m)
@@ -34,8 +34,12 @@ static int saturate(float v, int m) {
 /// Draw line in image
 void draw_line(const Point& p, const Point& q, unsigned char v,
                unsigned char* im, int w, int h) {
-    int x0=saturate(p.x,w), x1=saturate(q.x,w);
-    int y0=saturate(p.y,h), y1=saturate(q.y,h);
+    int x0=clip(p.x,w), x1=clip(q.x,w);
+    int y0=clip(p.y,h), y1=clip(q.y,h);
+    if(x0==x1 && y0==y1) {
+        im[y0*w+x0] = v;
+        return;
+    }
     int sx = (x0<x1)? +1: -1;
     int sy = (y0<y1)? +1: -1;
     int dx=x1-x0, dy=y1-y0;
