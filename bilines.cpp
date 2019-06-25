@@ -25,6 +25,7 @@
 #include "cmdLine.h"
 #include "xmtime.h"
 #include "io_png.h"
+#include <map>
 #include <cmath>
 
 /// Timer class to measure real time (not CPU time)
@@ -79,6 +80,25 @@ static unsigned char fill_border(unsigned char* im, size_t w, size_t h) {
     return (unsigned char)i;
 }
 
+/// Find upper/lower level sets and shift level accodingly.
+void fix_levels(LLTree& tree, unsigned char bg, int qStep) {
+    std::map<LLTree::Node*,bool> upper;
+    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it) {
+        unsigned char parentLevel = it->parent? it->parent->ll->level: bg;
+        bool up = it->ll->level > parentLevel;
+        if(it->ll->level == parentLevel)
+            up = !upper[it->parent];
+        upper[&*it] = up;
+    }
+    float delta = 0.5f*(float)qStep;
+    for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it) {
+        if(upper[&*it])
+            it->ll->level = std::min(it->ll->level+delta,255.0f);
+        else
+            it->ll->level = std::max(it->ll->level-delta,0.0f);
+    }
+}
+
 /// Return depth of node in tree. Roots are at depth 0.
 static int depth(const LLTree::Node& node) {
     const LLTree::Node* n=&node;
@@ -129,6 +149,8 @@ int main(int argc, char** argv) {
     std::cout << tree.nodes().size() << " level lines. ";
     timer.time();
 
+    fix_levels(tree, bg, qstep);
+
     std::cout << " 2. Reconstruct from level lines. " << std::flush;
     unsigned char* out = new unsigned char[3*w*h];
     timer.tick();
@@ -137,8 +159,8 @@ int main(int argc, char** argv) {
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
         fill_curve(it->ll->line,(unsigned char)it->ll->level,
                    out,(int)w,(int)h, &inter);
-    std::copy(out, out+w*h, in+w*h); // Copy to green channel
-    std::copy(out, out+w*h, in+2*w*h); // Copy to red channel
+    std::copy(out, out+w*h, out+1*w*h); // Copy to green channel
+    std::copy(out, out+w*h, out+2*w*h); // Copy to red channel
     timer.time();
 
     int depthMax=0;
