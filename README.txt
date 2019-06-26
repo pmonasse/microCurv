@@ -1,86 +1,73 @@
-microCurv - The image curvature microscope
-by Pascal Monasse <monasse@imagine.enpc.fr>,
-   Adina Ciomaga <adina@math.uchicago.edu>
-   Lionel Moisan <Lionel.Moisan@parisdescartes.fr>
+# Extraction of the Level Lines of a Bilinear Image #
 
-This software computes the mean curvature map of an image. It is linked to an IPOL article [1]. This is based on level line tree extraction of the bilinear interpolation of a digital image and affine invariant smoothing. These functionalities were inspired from the equivalent MegaWave2 [2] functions 'flst_bilinear' and 'gass', though the tree extraction is based on a much simpler algorithm than 'flst_bilinear'.
+## Summary ##
+This software computes the level lines of a bilinear interpolated image. It is
+linked to an IPOL article [1]. The level lines are organized in a tree structure
+showing how they enclose one another. This is at the basis of the image
+curvature microscope [2].
 
-[1] IPOL article, https://doi.org/10.5201/ipol.2017.212
-[2] MegaWave2, http://megawave.cmla.ens-cachan.fr/
+[1] Extraction of the Level Lines of a Bilinear Image, IPOL [URL]
 
-Version 1.0 released on 2017/06/29
+[2] IPOL article, <https://doi.org/10.5201/ipol.2017.212>
+
+## Author ##
+Pascal Monasse <pascal.monasse@enpc.fr>
+
+Laboratoire d'Informatique Gaspard Monge (LIGM)/
+Ecole des Ponts ParisTech
+
+## Version ##
+Version 1.0 released on 2019/06/26.
 
 Future releases and updates:
-https://github.com/pmonasse/microCurv.git
+<https://github.com/pmonasse/microCurv.git>
 
-Build
------
+## Build ##
 Prerequisites: CMake version 2.6 or later
 
 - Unix, MacOS:
-$ cd /path_to_this_file/
-$ mkdir Build && cd Build && cmake -DCMAKE_BUILD_TYPE:bool=Release ..
-$ make
-- Windows with MinGW:
-$ cd /path_to_this_file/
-$ mkdir Build 
-$ cd Build
-$ cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE:bool=Release ..
-$ mingw32-make
+    $ cd /pathToThisFile/
+    $ mkdir Build && cd Build && cmake -DCMAKE_BUILD_TYPE:bool=Release ..
+    $ make
 
-CMake tries to find libPNG and libTIFF on your system. They need to come with header files, which are provided by "...-dev" packages under Linux Debian or Ubuntu.
+- Windows with MinGW:
+    $ cd /path_to_this_file/
+    $ mkdir Build 
+    $ cd Build
+    $ cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE:bool=Release ..
+    $ mingw32-make
+
+CMake tries to find libPNG on your system, otherwise it uses the embedded version. The library needs to come with header files, which are provided by "lipng-dev" package under Linux Debian or Ubuntu.
 
 - Test:
-$ ./microCurv ../data/flower.png out.png
+    $ ./bilines ../data/flower.png out.png
 Compare out.png with ../data/flowerOut.png
 
-Usage
------
-microCurv [options] in.png outCurv.png [outCurv.tif]
+## Usage ##
+bilines [options] in.png out.png
   - in.png: PNG input image
-  - outCurv.png: PNG output image with superimposed curvatures
-  - outCurv.tif: float TIFF output image of mean curvature map
-Options:
-  -q <int>: quantization level step of level lines (default 8)
-  -s <float>: scale of smoothing by affine scale-space (default 2)
-  -z <float>: zoom factor for output bitmap images (default 1)
-  -o <fileName.png>: output image after level line smoothing
-  -I <fileName>: output file for level lines before smoothing
-  -O <fileName>: output file for level lines after smoothing
-  -r <ROI>: region of interest in input image. Format: wxh+x0+y0
-The extension of <fileName> in -I and -O options determines the file format: SVG (Scalable Vector Graphics, extension .svg) or PNG (any other extension). SVG output keeps the original size of the image. All other output images are bitmaps and scaled by the zoom factor. In particular, notice that the optional TIFF output image records the original image curvatures but in a zoomed bitmap image.
+  - out.png: PNG output image
+Option:
+  -q <int>: Quantization step (default 32)
 
-Files (Only those with * are reviewed)
------
-CMakeLists.txt
-cmdLine.h
-curv.cpp (*)
-curv.h (*)
-draw_curve.cpp
-draw_curve.h
-fill_curve.cpp
-fill_curve.h
-gass.cpp
-gass.h
-image.cpp
-image.h
-io_png.c
-io_png.h
-io_tiff.c
-io_tiff.h
-levelLine.cpp
-levelLine.h
-LICENSE.txt
-lltree.cpp
-lltree.h
-main.cpp (*)
-microCurv.h (*)
-microCurv.cpp (*)
-README.txt
-xmtime.h
-data/flower.png
-data/flowerOut.png
+## Files (Only those with &ast; are reviewed through IPOL) ##
 
-Limitations
------------
+    bilines.cpp (*)
+    fill_curve.cpp (*) fill_curve.h (*)
+    levelLine.cpp (*)  levelLine.h (*)
+    lltree.cpp (*)     lltree.h (*)
+
+    CMakeLists.txt
+    cmdLine.h
+    draw_curve.cpp draw_curve.h
+    io_png.c       io_png.h
+    LICENSE.txt
+    README.txt
+    test_extract.cpp
+    data/flower.png
+    data/flowerOut.png
+    third_party/...
+
+## Limitations ##
 The program extracts bilinear level lines at half-integer values (0.5, 1.5, etc). This can be modified (constant 'offset'), but it is important that the quantization avoids initial image levels (since iso-level sets can be quite complex at these levels).
+
