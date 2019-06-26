@@ -35,8 +35,8 @@ static const unsigned char image3[4*4]= {
 // Saddle value: 4, saddle point outside
 
 void test_image(const unsigned char* im,size_t w,size_t h,float level,int ppp) {
-    for(int i=0; i<h; i++) {
-        for(int j=0; j<w; j++)
+    for(size_t i=0; i<h; i++) {
+        for(size_t j=0; j<w; j++)
             std::cout << "\t" << (int)im[i*w+j];
         std::cout << std::endl;
     }
