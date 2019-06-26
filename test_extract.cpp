@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+/**
+ * @file test_extract.cpp
+ * @brief Test extraction of level lines on toy examples
+ * 
+ * (C) 2019, Pascal Monasse <pascal.monasse@enpc.fr>
+ */
+
 #include "levelLine.h"
 #include "cmdLine.h"
 #include <sstream>

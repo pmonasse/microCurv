@@ -23,9 +23,7 @@ set(SRC
     fill_curve.cpp fill_curve.h
     levelLine.cpp levelLine.h
     lltree.cpp lltree.h)
-add_executable(bilines ${SRC}
-               io_png.c io_png.h
-               bilines.cpp)
+add_executable(bilines ${SRC} io_png.c io_png.h bilines.cpp)
 target_link_libraries(bilines ${PNG_LIBRARIES} ${TIFF_LIBRARIES})
 
 if(UNIX)
