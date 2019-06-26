@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 find_package(PNG)
 if(NOT PNG_FOUND OR NOT TIFF_FOUND)
-    find_package(ZLIB) # zlib is needed by libPNG and by libTIFF
+    find_package(ZLIB) # zlib is needed by libPNG
     if(NOT ZLIB_FOUND)
         add_subdirectory(third_party/zlib-1.2.11)
         set(ZLIB_FOUND TRUE)
@@ -22,8 +22,7 @@ set(SRC
     draw_curve.cpp draw_curve.h
     fill_curve.cpp fill_curve.h
     levelLine.cpp levelLine.h
-    lltree.cpp lltree.h
-    xmtime.h)
+    lltree.cpp lltree.h)
 add_executable(bilines ${SRC}
                io_png.c io_png.h
                bilines.cpp)

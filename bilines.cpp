@@ -23,22 +23,9 @@
 #include "draw_curve.h"
 #include "fill_curve.h"
 #include "cmdLine.h"
-#include "xmtime.h"
 #include "io_png.h"
 #include <map>
 #include <cmath>
-
-/// Timer class to measure real time (not CPU time)
-class Timer {
-    unsigned long t; ///< Current time in milliseconds
-public:
-    Timer() { tick(); } ///< Constructor
-    unsigned long tick() { return t=xmtime(); } ///< Reset time
-    void time() { ///< Display elapsed time and reset current time
-        unsigned long told = t;
-        std::cout << "Time = " << (tick()-told)/1000.0f << "s" << std::endl;
-    }
-};
 
 /// Compute histogram of level at pixels at the border of the image.
 static void histogram(unsigned char* im, size_t w, size_t h, size_t histo[256]){
@@ -80,7 +67,7 @@ static unsigned char fill_border(unsigned char* im, size_t w, size_t h) {
     return (unsigned char)i;
 }
 
-/// Find upper/lower level sets and shift level accodingly.
+/// Find upper/lower level sets and shift level accordingly.
 void fix_levels(LLTree& tree, unsigned char bg, int qStep) {
     std::map<LLTree::Node*,bool> upper;
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it) {
@@ -139,21 +126,17 @@ int main(int argc, char** argv) {
     }
     unsigned char bg = fill_border(in, w, h); // Background gray of output
 
-    Timer timer;
-
-    std::cout << " 1. Extract level lines: " << std::flush;
-    timer.tick();
+    // 1. Extract tree of bilinear level lines
     const float offset=0.5f;
     LLTree tree(in, (int)w, (int)h, offset, qstep, 0);
     free(in);
-    std::cout << tree.nodes().size() << " level lines. ";
-    timer.time();
+    std::cout << tree.nodes().size() << " level lines." << std::endl;
 
+    // 2. Adjust levels according to upper/lower level set
     fix_levels(tree, bg, qstep);
 
-    std::cout << " 2. Reconstruct from level lines. " << std::flush;
+    // 3. Reconstruct quantized image from level lines
     unsigned char* out = new unsigned char[3*w*h];
-    timer.tick();
     std::fill(out, out+3*w*h, bg);
     std::vector< std::vector<float> > inter;
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it)
@@ -161,18 +144,16 @@ int main(int argc, char** argv) {
                    out,(int)w,(int)h, &inter);
     std::copy(out, out+w*h, out+1*w*h); // Copy to green channel
     std::copy(out, out+w*h, out+2*w*h); // Copy to red channel
-    timer.time();
 
+    // 4. Draw level lines with a color depending on their depth in tree
     int depthMax=0;
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it) {
         int d = depth(*it);
         if(depthMax<d)
             depthMax = d;
     }
-    std::cout << "Max depth: " << depthMax << std::endl;
+    std::cout << "Max depth of tree: " << depthMax << std::endl;
 
-    std::cout << " 3. Draw curves. " << std::flush;
-    timer.tick();
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it) {
         int d = depth(*it);
         unsigned char r,g,b;
@@ -181,8 +162,8 @@ int main(int argc, char** argv) {
         draw_curve(it->ll->line,g, out+1*w*h,(int)w,(int)h);
         draw_curve(it->ll->line,b, out+2*w*h,(int)w,(int)h);
     }
-    timer.time();
 
+    // Output image
     if(io_png_write_u8(argv[2], out, (int)w, (int)h, 3)!=0) {
         std::cerr << "Error writing image file " << argv[2] << std::endl;
         return 1;
