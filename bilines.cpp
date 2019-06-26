@@ -84,7 +84,7 @@ static unsigned char fill_border(unsigned char* im, size_t w, size_t h) {
 void fix_levels(LLTree& tree, unsigned char bg, int qStep) {
     std::map<LLTree::Node*,bool> upper;
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it) {
-        unsigned char parentLevel = it->parent? it->parent->ll->level: bg;
+        float parentLevel = it->parent? it->parent->ll->level: bg;
         bool up = it->ll->level > parentLevel;
         if(it->ll->level == parentLevel)
             up = !upper[it->parent];
