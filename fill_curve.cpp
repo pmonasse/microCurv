@@ -70,7 +70,7 @@ static void bound(std::vector< std::vector<float> >& inter, float x, int iy) {
         inter[iy].push_back(x);
 }
 
-/// Add segment to point i to current polyline
+/// Add segment to point i to current polyline: see [1]Figure 4 for the rules.
 void PolyIterator::add_point(const Point& pi,
                              std::vector< std::vector<float> >& inter) {
     Point q = p;
@@ -80,12 +80,12 @@ void PolyIterator::add_point(const Point& pi,
     if(q.y==p.y) { // Horizontal segment
         if(q.x!=p.x && is_integer(q.y)) {
             dir = sign(q.x,p.x);
-            if(bHorizontal) { // Half-turn
+            if(bHorizontal) { // Half-turn, rule (f)
                 if(dirP!=dir)
                     bound(inter, q.x, (int)q.y); 
-            } else {
+            } else { // Rules (b), (c)
                 bHorizontal = true; // First among horizontal edgels
-                if(dirP==dir)
+                if(dirP==dir) // Rule (b)
                     bound(inter, q.x, (int)q.y);
             }
         }
@@ -97,19 +97,19 @@ void PolyIterator::add_point(const Point& pi,
     int iy2 = (int)p.y + dir;
     float a = (q.x-p.x) / (q.y-p.y); // Slope
 
-    if(bHorizontal) { // Away from horizontal edgel
+    if(bHorizontal) { // Away from horizontal edgel, rules (d), (e)
         bHorizontal = false;
-        if(dirP!=dir)
+        if(dirP!=dir) // Rule (d)
             bound(inter, q.x, iy1);
         iy1 += dir;
-    } else if(dir!=dirP && q.y==(float)iy1) { // Local peak
+    } else if(dir!=dirP && q.y==(float)iy1) { // Local peak, rule (g)
         bound(inter, q.x, iy1); // Single point interval
         bound(inter, q.x, iy1);
         iy1 += dir;
     } else if(dir>0 && (float)iy1<q.y)
         iy1 += dir;
 
-    for(int j=iy1; j!=iy2; j+=dir) {
+    for(int j=iy1; j!=iy2; j+=dir) { // Rule (a)
         if(dir > 0) {
             if(p.y<=(float)j) continue; // Out of bounds
         } else

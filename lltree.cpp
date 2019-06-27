@@ -59,7 +59,7 @@ LLTree::iterator& LLTree::iterator::operator++() {
     return *this;
 }
 
-/// Build tree structure of level lines
+/// Build tree structure of level lines: [1]Algorithm 4.
 LLTree::LLTree(const unsigned char* data, size_t w, size_t h,
                float offset, float step, int ptsPixel)
 : root_(0) {

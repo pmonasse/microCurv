@@ -54,7 +54,7 @@ static unsigned char fill_border(unsigned char* im, size_t w, size_t h) {
     return (unsigned char)i;
 }
 
-/// Find upper/lower level sets and shift level accordingly.
+/// Find upper/lower level sets and shift level accordingly: [1]Algorithm 6.
 static void fix_levels(LLTree& tree, unsigned char bg, int qStep) {
     std::map<LLTree::Node*,bool> upper;
     for(LLTree::iterator it=tree.begin(); it!=tree.end(); ++it) {
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
     // 2. Adjust levels according to upper/lower level set
     fix_levels(tree, bg, qstep);
 
-    // 3. Reconstruct quantized image from level lines
+    // 3. Reconstruct quantized image from level lines: [1]Algorithm 5.
     unsigned char* out = new unsigned char[3*w*h];
     std::fill(out, out+3*w*h, bg);
     std::vector< std::vector<float> > inter;
