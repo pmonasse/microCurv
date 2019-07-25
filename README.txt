@@ -52,10 +52,10 @@ Option:
 
 ## Files (Only those with &ast; are reviewed through IPOL) ##
 
-    bilines.cpp (*)
-    fill_curve.cpp (*) fill_curve.h (*)
-    levelLine.cpp (*)  levelLine.h (*)
-    lltree.cpp (*)     lltree.h (*)
+    bilines.cpp (*): main function, calls Algo. 1 and implements Algo. 6.
+    fill_curve.cpp (*) fill_curve.h (*): implements Algo. 5.
+    levelLine.cpp (*)  levelLine.h (*): implements Algo. 4.
+    lltree.cpp (*)     lltree.h (*): implements Algos. 1-3.
 
     CMakeLists.txt
     cmdLine.h
@@ -70,4 +70,3 @@ Option:
 
 ## Limitations ##
 The program extracts bilinear level lines at half-integer values (0.5, 1.5, etc). This can be modified (constant 'offset'), but it is important that the quantization avoids initial image levels (since iso-level sets can be quite complex at these levels).
-
