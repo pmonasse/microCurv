@@ -82,7 +82,8 @@ private:
 /// \param p a point on an edgel of the dual pixel and on the hyperbola.
 /// \param level the levels at the four vertices of the dual pixel.
 /// \param l level.
-/// \return Do we really have a hyperbola? It may be a segment.
+/// The hyperbola can be degenerate (a segment), in which case \c s, \c v and
+/// \c delta make no sense. The method \c valid() must be used to check.
 Hyperbola::Hyperbola(const Point& pos, const Point& p,
                      unsigned char level[4],float l) {
     num = level[0]*(float)level[2]-level[1]*(float)level[3];
@@ -161,7 +162,7 @@ private:
     Dir _d; /// Direction of entry into dual pixel.
 
     void update_levels();
-    Point move(bool left, bool right, float l);
+    Point move(float l, float snum, float sdenom);
 };
 
 /// Return x for y=v on line joining (0,v0) and (1,v1).
@@ -191,14 +192,20 @@ void DualPixel::update_levels() {
     _level[1] = _im[ind+_w]; _level[2] = _im[ind+_w+1];
 }
 
-/// Move to next adjacent dual pixel, knowing whether we turn: [1]Algorithm 2.
-/// \param left make a left turn?
-/// \param right make a right turn?
+/// Move to next adjacent dual pixel: [1]Algorithm 2.
 /// \param l the level of the level line
+/// \param snum numerator of saddle level
+/// \param sdenom denominator of saddle level
 /// \return subpixel entry point in new dual pixel (=exit point of old one)
-/// Parameters \a left and \a right are exclusive. They can be both \c false,
-/// meaning no turn occurs.
-Point DualPixel::move(bool left, bool right, float l) {
+/// Only the saddle level (snum/sdenom) may be used, but most of the time it is
+/// not. Pass two parameters in order not to pay an unnecessary division.
+Point DualPixel::move(float l, float snum, float sdenom) {
+    bool left  = (l>_level[(_d+2)%4]); // Is there an exit at the left?
+    bool right = (l<_level[(_d+1)%4]); // Is there an exit at the right?
+    if(left && right) { // Disambiguate saddle point
+        right = (l<snum/sdenom);
+        left = !right;
+    }
     // update direction
     if(left  && ++_d>3) _d=0;
     if(right && --_d<0) _d=3;
@@ -226,14 +233,8 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
     Hyperbola h(_pos, p, _level, l);
     bool vInside = h.vertex_in_dual_pixel(_pos);
     // 2. Move dual pixel to new position
-    bool left  = (l>_level[(_d+2)%4]); // Is there an exit at the left?
-    bool right = (l<_level[(_d+1)%4]); // Is there an exit at the right?
-    if(left && right) { // Disambiguate saddle point
-        right = (l<h.num/h.denom);
-        left = !right;
-    }
     Point pIni = p; // Keep track of entry point before moving to exit
-    p = move(left, right, l);
+    p = move(l, h.num, h.denom);
     // 3. Sample hyperbola in previous dual pixel position
     if(h.valid() && ptsPixel>0) { // Do not sample if not hyperbola (straight)
         if(std::abs(h.delta) < 1.0e-2f) { // Saddle level: one or two segments
