@@ -17,10 +17,6 @@
 #include <sstream>
 #include <cassert>
 
-#ifdef _WIN32
-#pragma warning(disable:4290) // exception specification ignored...
-#endif
-
 /// Base class for option/switch
 class Option {
 public:
@@ -198,7 +194,7 @@ public:
     }
     /// Parse of command line acting as a filter. All options are virtually
     /// removed from the command line.
-    void process(int& argc, char* argv[]) throw(std::string) {
+    void process(int& argc, char* argv[]) {
         std::vector<Option*>::iterator it=opts.begin();
         for(; it != opts.end(); ++it)
             (*it)->used = false;
