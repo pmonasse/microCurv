@@ -59,7 +59,7 @@ endif()
 
 if(UNIX)
     set_target_properties(microCurv PROPERTIES COMPILE_FLAGS
-                          "-Wall -Wextra -Werror ${OpenMP_CXX_FLAGS}")
+                          "-Wall -Wextra ${OpenMP_CXX_FLAGS}")
 endif()
 
 add_executable(test_extract ${SRC} test_extract.cpp)
