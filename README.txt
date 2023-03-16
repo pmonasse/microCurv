@@ -5,7 +5,7 @@ by Pascal Monasse <monasse@imagine.enpc.fr>,
 
 This software computes the mean curvature map of an image. It is linked to an IPOL article [1]. This is based on level line tree extraction of the bilinear interpolation of a digital image and affine invariant smoothing. These functionalities were inspired from the equivalent MegaWave2 [2] functions 'flst_bilinear' and 'gass', though the tree extraction is based on a much simpler algorithm than 'flst_bilinear'.
 
-[1] IPOL article, https://doi.org/10.5201/ipol.2017.212
+[1] The Image Curvature Microscope, IPOL, https://doi.org/10.5201/ipol.2017.212
 [2] MegaWave2, http://megawave.cmla.ens-cachan.fr/
 
 Version 1.0 released on 2017/06/29
@@ -20,13 +20,13 @@ Prerequisites: CMake version 2.6 or later
 - Unix, MacOS:
 $ cd /path_to_this_file/
 $ mkdir Build && cd Build && cmake -DCMAKE_BUILD_TYPE:bool=Release ..
-$ make
+$ cmake --build .
 - Windows with MinGW:
 $ cd /path_to_this_file/
 $ mkdir Build 
 $ cd Build
 $ cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE:bool=Release ..
-$ mingw32-make
+$ cmake --build .
 
 CMake tries to find libPNG and libTIFF on your system. They need to come with header files, which are provided by "...-dev" packages under Linux Debian or Ubuntu.
 
