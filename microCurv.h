@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * @file microCurv.h
  * @brief Compute mean curvatures

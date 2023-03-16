@@ -107,7 +107,7 @@ bool Hyperbola::vertex_in_dual_pixel(const Point& p) const {
 }
 
 /// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta:
-/// [1]Algorithm 3.
+/// [2]Algorithm 3.
 /// \param p1 start point.
 /// \param p2 end point.
 /// \param ptsPixel number of points of discretization per pixel.
@@ -192,7 +192,7 @@ void DualPixel::update_levels() {
     _level[1] = _im[ind+_w]; _level[2] = _im[ind+_w+1];
 }
 
-/// Move to next adjacent dual pixel: [1]Algorithm 2.
+/// Move to next adjacent dual pixel: [2]Algorithm 2.
 /// \param l the level of the level line
 /// \param snum numerator of saddle level
 /// \param sdenom denominator of saddle level
@@ -297,7 +297,7 @@ static void extract(const unsigned char* data, size_t w,
     }
 }
 
-/// Level lines extraction algorithm: [1]Algorithm 1.
+/// Level lines extraction algorithm: [2]Algorithm 1.
 /// \param data the values of pixels in a 1D array.
 /// \param w the number of pixel columns in \a data.
 /// \param h the number of pixel lines in \a data.

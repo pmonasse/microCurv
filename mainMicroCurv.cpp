@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * @file main.cpp
+ * @file mainMicroCurv.cpp
  * @brief Handle i/o of program microCurv.
  * 
  * Copyright (c) 2011-2017, Adina Ciomaga, Pascal Monasse
@@ -190,10 +191,12 @@ int main(int argc, char** argv) {
     rectSelect.h += 2*MARGIN;
     const int ncol=rectSelect.w, nrow=rectSelect.h; // Dim of image with margins
 
+    // [1]Algo1,1-2
     unsigned char* inImage = extract(inIm,w,h, rectSelect);
     free(inIm);
     fill_border(inImage,ncol,nrow);
 
+    // [1]Algo1,3-7
     std::cout << " 1. Extract level lines: " << std::flush;
     timer.tick();
     LLTree* tree = extract_tree(inImage, ncol, nrow);
@@ -204,6 +207,7 @@ int main(int argc, char** argv) {
     if(! output_curves(*tree,qstep,ncol,nrow,R,zoom,inLL))
         return 1;
 
+    // [1]Algo1,8-10
     std::cout << " 2. Smooth level lines by affine shortening. " << std::flush;
     timer.tick();
     smooth_ll(*tree, scale);
@@ -224,6 +228,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // [1]Algo1,11-16
     std::cout << " 4. Compute the curvature map: " << std::flush;
     timer.tick();
     std::vector<LevelLine*> qll;

@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+project(microCurv)
 
 find_package(PNG)
 find_package(TIFF)

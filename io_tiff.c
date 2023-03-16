@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Copyright (c) 2010, Pascal Monasse <monasse@imagine.enpc.fr>
  * All rights reserved.

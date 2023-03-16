@@ -70,7 +70,7 @@ static void bound(std::vector< std::vector<float> >& inter, float x, int iy) {
         inter[iy].push_back(x);
 }
 
-/// Add segment to point i to current polyline: see [1]Figure 4 for the rules.
+/// Add segment to point i to current polyline: see [2]Figure 4 for the rules.
 void PolyIterator::add_point(const Point& pi,
                              std::vector< std::vector<float> >& inter) {
     Point q = p;

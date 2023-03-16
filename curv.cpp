@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * @file curv.cpp
  * @brief Compute mean curvatures
@@ -40,7 +41,7 @@ static float dist(Point p, const Point& q) {
     return sqrt(p.x*p.x+p.y*p.y);
 }
 
-/// Compute 2x2 determinant: det(b-a c-a).
+/// Compute 2x2 determinant: det(b-a c-a). [1](11)
 /// The minus sign of the result comes from the fact that the pixel coordinate
 /// system is left-handed.
 inline float det(const Point& a, const Point& b, const Point& c) {
@@ -63,7 +64,7 @@ static int last_point(const std::vector<Point>& curve) {
     return 0; // Single vertex
 }
 
-/// Record curvatures inside the pixels the \a curve goes through.
+/// Record curvatures inside the pixels the \a curve goes through. [1](10)
 ///
 /// The orientation is said positive (wrt trigonometric orientation) if the
 /// gradient of the image is to the left when following the level line.

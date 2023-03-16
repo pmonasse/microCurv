@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef _IO_PNG_H
 #define _IO_PNG_H
 

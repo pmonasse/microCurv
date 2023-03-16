@@ -17,7 +17,11 @@ Laboratoire d'Informatique Gaspard Monge (LIGM)/
 Ecole des Ponts ParisTech
 
 ## Version ##
-Version 1.0 released on 2019/06/26.
+Version 2.0, released on 2023/03/21
+
+Old versions:
+[1] microCurv Version 1.0 released on 2017/06/29
+[2] bilines Version 1.0 released on 2019/06/26
 
 Future releases and updates:
 <https://github.com/pmonasse/microCurv.git>
@@ -71,8 +75,8 @@ The extension of <fileName> in -I and -O options determines the file format: SVG
     fill_curve.cpp (*) fill_curve.h (*): implements [2] Algo. 5.
     levelLine.cpp (*)  levelLine.h (*): implements [2] Algo. 4.
     lltree.cpp (*)     lltree.h (*): implements [2] Algos. 1-3.
-    curv.cpp (*)       curv.h (*)
-    mainMicroCurv.cpp (*)
+    curv.cpp (*)       curv.h (*): implements [1] Algo. 1 14-16 and (10),(11).
+    mainMicroCurv.cpp (*): main function, [1] Algo. 1
     microCurv.cpp (*)  microCurv.h (*)
 
     CMakeLists.txt
