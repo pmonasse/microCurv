@@ -1,23 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * @file levelLine.cpp
  * @brief Extraction of level lines from an image
- * @author Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2011-2016, 2019 Pascal Monasse
- * All rights reserved.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * (C) 2011-2016, 2019 Pascal Monasse <pascal.monasse@enpc.fr>
  */
 
 #include "levelLine.h"
@@ -96,7 +82,8 @@ private:
 /// \param p a point on an edgel of the dual pixel and on the hyperbola.
 /// \param level the levels at the four vertices of the dual pixel.
 /// \param l level.
-/// \return Do we really have a hyperbola? It may be a segment.
+/// The hyperbola can be degenerate (a segment), in which case \c s, \c v and
+/// \c delta make no sense. The method \c valid() must be used to check.
 Hyperbola::Hyperbola(const Point& pos, const Point& p,
                      unsigned char level[4],float l) {
     num = level[0]*(float)level[2]-level[1]*(float)level[3];
@@ -119,7 +106,8 @@ bool Hyperbola::vertex_in_dual_pixel(const Point& p) const {
     return valid() && (p.x<v.x && v.x<p.x+1 && p.y<v.y && v.y<p.y+1);
 }
 
-/// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta.
+/// Sample branch of hyperbola from p1 to p2 of equation (x-xs)(y-ys)=delta:
+/// [1]Algorithm 3.
 /// \param p1 start point.
 /// \param p2 end point.
 /// \param ptsPixel number of points of discretization per pixel.
@@ -174,7 +162,7 @@ private:
     Dir _d; /// Direction of entry into dual pixel.
 
     void update_levels();
-    Point move(bool left, bool right, float l);
+    Point move(float l, float snum, float sdenom);
 };
 
 /// Return x for y=v on line joining (0,v0) and (1,v1).
@@ -204,14 +192,20 @@ void DualPixel::update_levels() {
     _level[1] = _im[ind+_w]; _level[2] = _im[ind+_w+1];
 }
 
-/// Move to next adjacent dual pixel, knowing whether we turn.
-/// \param left make a left turn?
-/// \param right make a right turn?
+/// Move to next adjacent dual pixel: [1]Algorithm 2.
 /// \param l the level of the level line
+/// \param snum numerator of saddle level
+/// \param sdenom denominator of saddle level
 /// \return subpixel entry point in new dual pixel (=exit point of old one)
-/// Parameters \a left and \a right are exclusive. They can be both \c false,
-/// meaning no turn occurs.
-Point DualPixel::move(bool left, bool right, float l) {
+/// Only the saddle level (snum/sdenom) may be used, but most of the time it is
+/// not. Pass two parameters in order not to pay an unnecessary division.
+Point DualPixel::move(float l, float snum, float sdenom) {
+    bool left  = (l>_level[(_d+2)%4]); // Is there an exit at the left?
+    bool right = (l<_level[(_d+1)%4]); // Is there an exit at the right?
+    if(left && right) { // Disambiguate saddle point
+        right = (l<snum/sdenom);
+        left = !right;
+    }
     // update direction
     if(left  && ++_d>3) _d=0;
     if(right && --_d<0) _d=3;
@@ -239,14 +233,8 @@ void DualPixel::follow(Point& p, float l, int ptsPixel,
     Hyperbola h(_pos, p, _level, l);
     bool vInside = h.vertex_in_dual_pixel(_pos);
     // 2. Move dual pixel to new position
-    bool left  = (l>_level[(_d+2)%4]); // Is there an exit at the left?
-    bool right = (l<_level[(_d+1)%4]); // Is there an exit at the right?
-    if(left && right) { // Disambiguate saddle point
-        right = (l<h.num/h.denom);
-        left = !right;
-    }
     Point pIni = p; // Keep track of entry point before moving to exit
-    p = move(left, right, l);
+    p = move(l, h.num, h.denom);
     // 3. Sample hyperbola in previous dual pixel position
     if(h.valid() && ptsPixel>0) { // Do not sample if not hyperbola (straight)
         if(std::abs(h.delta) < 1.0e-2f) { // Saddle level: one or two segments
@@ -309,7 +297,7 @@ static void extract(const unsigned char* data, size_t w,
     }
 }
 
-/// Level lines extraction algorithm.
+/// Level lines extraction algorithm: [1]Algorithm 1.
 /// \param data the values of pixels in a 1D array.
 /// \param w the number of pixel columns in \a data.
 /// \param h the number of pixel lines in \a data.
